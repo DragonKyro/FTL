@@ -29,6 +29,7 @@ from ftl.store.purchase import (
     upgrade_system,
 )
 from ftl.ui import theme
+from ftl.ui.text_cache import TextCache
 
 if TYPE_CHECKING:
     from ftl.core.game import Game
@@ -50,6 +51,7 @@ class StoreScene(Scene):
         super().__init__(game=game)
         self.inventory: StoreInventory = inventory
         self.selected_category: str = "weapons"
+        self._text = TextCache()
 
     def on_show_view(self) -> None:
         arcade.set_background_color(theme.BG_PRIMARY)
@@ -65,19 +67,21 @@ class StoreScene(Scene):
         run = self.game.run if self.game else None
         if run is None:
             return
-        arcade.draw_text(
-            "STORE", WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50,
+        self._text.draw(
+            "title", "STORE",
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50,
             theme.TEXT_PRIMARY, theme.FONT_TITLE_SIZE - 16,
             anchor_x="center",
         )
-        arcade.draw_text(
-            f"SCRAP {run.scrap}", 16, WINDOW_HEIGHT - 28,
+        self._text.draw(
+            "scrap", f"SCRAP {run.scrap}",
+            16, WINDOW_HEIGHT - 28,
             theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
         )
         self._draw_categories()
         self._draw_items(run)
-        arcade.draw_text(
-            "Click a row to buy   [Esc] Leave store",
+        self._text.draw(
+            "hint", "Click a row to buy   [Esc] Leave store",
             WINDOW_WIDTH / 2, 20,
             theme.TEXT_DIM, theme.FONT_SMALL_SIZE,
             anchor_x="center",
@@ -87,7 +91,10 @@ class StoreScene(Scene):
         for i, (key, label) in enumerate(_CATEGORIES):
             y = WINDOW_HEIGHT - 110 - i * 36
             color = theme.TEXT_ACCENT if key == self.selected_category else theme.TEXT_DIM
-            arcade.draw_text(f"> {label}", 40, y, color, theme.FONT_BODY_SIZE)
+            self._text.draw(
+                ("cat", key), f"> {label}",
+                40, y, color, theme.FONT_BODY_SIZE,
+            )
 
     def _category_rect(self, index: int) -> tuple[float, float, float, float]:
         y = WINDOW_HEIGHT - 110 - index * 36
@@ -118,12 +125,16 @@ class StoreScene(Scene):
     def _draw_items(self, run) -> None:  # type: ignore[no-untyped-def]
         x = 260.0
         rows = self._item_rows(run)
-        for i, (_rid, label, price) in enumerate(rows):
+        for i, (rid, label, price) in enumerate(rows):
             y = WINDOW_HEIGHT - 120 - i * 36
             affordable = run.scrap >= price
             color = theme.TEXT_PRIMARY if affordable else theme.TEXT_DIM
-            arcade.draw_text(label, x, y, color, theme.FONT_BODY_SIZE)
-            arcade.draw_text(
+            self._text.draw(
+                ("item_label", self.selected_category, i),
+                label, x, y, color, theme.FONT_BODY_SIZE,
+            )
+            self._text.draw(
+                ("item_price", self.selected_category, i),
                 f"{price} sc", x + 460, y,
                 color, theme.FONT_BODY_SIZE,
                 anchor_x="right",

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import arcade
 
 from ftl.ui import theme
+from ftl.ui.text_cache import TextCache
 
 if TYPE_CHECKING:
     from ftl.combat.combat_state import Inventory
@@ -35,6 +36,7 @@ class WeaponStrip:
         self.origin_x: float = origin_x
         self.origin_y: float = origin_y
         self.selected_index: int | None = None
+        self._text = TextCache()
 
     def slot_rect(self, index: int) -> tuple[float, float, float, float]:
         left = self.origin_x + index * (SLOT_WIDTH + SLOT_GAP)
@@ -57,7 +59,8 @@ class WeaponStrip:
                 border_width=2 if i == self.selected_index else 1,
             )
             # Name + family
-            arcade.draw_text(
+            self._text.draw(
+                ("name", i),
                 f"W{i+1}  {weapon.stats.name}",
                 left + 6,
                 bottom + h - theme.FONT_LABEL_SIZE - 4,
@@ -94,7 +97,8 @@ class WeaponStrip:
                 status_parts.append("→ -")
             if weapon.consumes_missile:
                 status_parts.append(f"ammo {self.inventory.missiles}")
-            arcade.draw_text(
+            self._text.draw(
+                ("status", i),
                 "  ".join(status_parts),
                 left + 6 + bar_w / 2,
                 bottom + h - theme.FONT_LABEL_SIZE - 4,

@@ -36,6 +36,51 @@ class EventScene(Scene):
         self.resolved_outcome: OutcomeDef | None = None
         self.resolved_text: str = ""
 
+        body_width = int(WINDOW_WIDTH - 2 * _TEXT_LEFT)
+        self._title_text = arcade.Text(
+            event_def.name,
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT - 60,
+            theme.TEXT_PRIMARY, theme.FONT_TITLE_SIZE - 16,
+            anchor_x="center",
+        )
+        self._body_text = arcade.Text(
+            event_def.text or "",
+            _TEXT_LEFT, _TEXT_TOP,
+            theme.TEXT_PRIMARY, theme.FONT_BODY_SIZE,
+            multiline=True, width=body_width,
+            anchor_y="top",
+        )
+        self._choice_texts: list[arcade.Text] = []
+        for i, choice in enumerate(event_def.choices):
+            y = _CHOICE_FIRST_Y - i * _CHOICE_SPACING
+            self._choice_texts.append(
+                arcade.Text(
+                    f"[{i + 1}] {choice.text}",
+                    _CHOICE_LEFT, y,
+                    theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
+                )
+            )
+        self._hint_text = arcade.Text(
+            "Press 1-4 or click a choice",
+            WINDOW_WIDTH / 2, 24,
+            theme.TEXT_DIM, theme.FONT_SMALL_SIZE,
+            anchor_x="center",
+        )
+        # Resolved-state Text objects (resolved_text is set when an outcome lands).
+        self._outcome_text = arcade.Text(
+            "",
+            _TEXT_LEFT, _TEXT_TOP,
+            theme.TEXT_PRIMARY, theme.FONT_BODY_SIZE,
+            multiline=True, width=body_width,
+            anchor_y="top",
+        )
+        self._continue_text = arcade.Text(
+            "[Enter] Continue",
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT * 0.30,
+            theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
+            anchor_x="center",
+        )
+
     def on_show_view(self) -> None:
         arcade.set_background_color(theme.BG_PRIMARY)
         if self.game is not None:
@@ -43,53 +88,21 @@ class EventScene(Scene):
 
     def on_draw(self) -> None:
         self.clear()
-        arcade.draw_text(
-            self.event_def.name,
-            WINDOW_WIDTH / 2, WINDOW_HEIGHT - 60,
-            theme.TEXT_PRIMARY, theme.FONT_TITLE_SIZE - 16,
-            anchor_x="center",
-        )
+        self._title_text.draw()
         if self.resolved_outcome is None:
             self._draw_choosing()
         else:
             self._draw_resolved()
 
     def _draw_choosing(self) -> None:
-        arcade.draw_text(
-            self.event_def.text or "",
-            _TEXT_LEFT, _TEXT_TOP,
-            theme.TEXT_PRIMARY, theme.FONT_BODY_SIZE,
-            multiline=True, width=int(WINDOW_WIDTH - 2 * _TEXT_LEFT),
-            anchor_y="top",
-        )
-        for i, choice in enumerate(self.event_def.choices):
-            y = _CHOICE_FIRST_Y - i * _CHOICE_SPACING
-            arcade.draw_text(
-                f"[{i + 1}] {choice.text}",
-                _CHOICE_LEFT, y,
-                theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
-            )
-        arcade.draw_text(
-            "Press 1-4 or click a choice",
-            WINDOW_WIDTH / 2, 24,
-            theme.TEXT_DIM, theme.FONT_SMALL_SIZE,
-            anchor_x="center",
-        )
+        self._body_text.draw()
+        for text in self._choice_texts:
+            text.draw()
+        self._hint_text.draw()
 
     def _draw_resolved(self) -> None:
-        arcade.draw_text(
-            self.resolved_text,
-            _TEXT_LEFT, _TEXT_TOP,
-            theme.TEXT_PRIMARY, theme.FONT_BODY_SIZE,
-            multiline=True, width=int(WINDOW_WIDTH - 2 * _TEXT_LEFT),
-            anchor_y="top",
-        )
-        arcade.draw_text(
-            "[Enter] Continue",
-            WINDOW_WIDTH / 2, WINDOW_HEIGHT * 0.30,
-            theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
-            anchor_x="center",
-        )
+        self._outcome_text.draw()
+        self._continue_text.draw()
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if self.resolved_outcome is None:
@@ -129,6 +142,7 @@ class EventScene(Scene):
         apply_outcome(self.game.run, outcome)
         self.resolved_outcome = outcome
         self.resolved_text = outcome.text or "You move on."
+        self._outcome_text.text = self.resolved_text
 
     def _continue_after_outcome(self) -> None:
         if self.game is None or self.window is None or self.resolved_outcome is None:

@@ -18,6 +18,7 @@ from ftl.core.scene import Scene
 from ftl.crew.crew import CrewState
 from ftl.ships.pathfinding import find_path
 from ftl.ui import theme
+from ftl.ui.text_cache import TextCache
 from ftl.ui.crew_panel import CrewPanel
 from ftl.ui.hud import CombatHUD
 from ftl.ui.power_panel import PowerPanel
@@ -68,6 +69,7 @@ class CombatScene(Scene):
 
         self._outcome_handled: bool = False
         self._targeting_action: str | None = None  # "teleport" | "mind" | "hack" | "boarding"
+        self._text = TextCache()
 
     # --- arcade lifecycle ---------------------------------------------------
 
@@ -116,12 +118,10 @@ class CombatScene(Scene):
             "hack": "HACKING — click an enemy system room",
             "boarding": "BOARDING DRONE — click an enemy room",
         }.get(self._targeting_action, "TARGETING")
-        arcade.draw_text(
-            label,
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT - 90,
-            theme.TEXT_WARNING,
-            theme.FONT_BODY_SIZE,
+        self._text.draw(
+            "targeting_banner", label,
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT - 90,
+            theme.TEXT_WARNING, theme.FONT_BODY_SIZE,
             anchor_x="center",
         )
 
@@ -144,12 +144,10 @@ class CombatScene(Scene):
                 rem = getattr(system, "cooldown_remaining", 0.0)
                 parts.append(f"{label} cd{rem:.0f}s")
         if parts:
-            arcade.draw_text(
-                "  ".join(parts),
-                WINDOW_WIDTH - 16,
-                WINDOW_HEIGHT - 64,
-                theme.TEXT_ACCENT,
-                theme.FONT_LABEL_SIZE,
+            self._text.draw(
+                "active_status", "  ".join(parts),
+                WINDOW_WIDTH - 16, WINDOW_HEIGHT - 64,
+                theme.TEXT_ACCENT, theme.FONT_LABEL_SIZE,
                 anchor_x="right",
             )
 
@@ -408,12 +406,10 @@ class CombatScene(Scene):
             "[M] mind  [H] hack  [D] boarding drone  [A] AP drone  "
             "[Space] pause  [F] flee  [Esc] menu"
         )
-        arcade.draw_text(
-            hint,
-            WINDOW_WIDTH / 2,
-            16,
-            theme.TEXT_DIM,
-            theme.FONT_SMALL_SIZE,
+        self._text.draw(
+            "hint", hint,
+            WINDOW_WIDTH / 2, 16,
+            theme.TEXT_DIM, theme.FONT_SMALL_SIZE,
             anchor_x="center",
         )
 

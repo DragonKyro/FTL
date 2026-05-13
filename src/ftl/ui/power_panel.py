@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import arcade
 
 from ftl.ui import theme
+from ftl.ui.text_cache import TextCache
 
 if TYPE_CHECKING:
     from ftl.ships.ship import Ship
@@ -34,12 +35,13 @@ class PowerPanel:
         self.ship: Ship = ship
         self.origin_x: float = origin_x
         self.origin_y: float = origin_y
+        self._text = TextCache()
 
     def draw(self) -> None:
         x = self.origin_x
         y = self.origin_y
-        arcade.draw_text(
-            "REACTOR", x, y, theme.TEXT_DIM, theme.FONT_LABEL_SIZE
+        self._text.draw(
+            "reactor_label", "REACTOR", x, y, theme.TEXT_DIM, theme.FONT_LABEL_SIZE
         )
         x += 64
         for name in SYSTEM_DISPLAY_ORDER:
@@ -50,18 +52,16 @@ class PowerPanel:
             x += 88
         used = self.ship.power_used
         cap = self.ship.max_reactor_power
-        arcade.draw_text(
-            f"{used} / {cap}",
-            x + 8,
-            y,
-            theme.TEXT_PRIMARY,
-            theme.FONT_LABEL_SIZE,
+        self._text.draw(
+            "cap", f"{used} / {cap}",
+            x + 8, y,
+            theme.TEXT_PRIMARY, theme.FONT_LABEL_SIZE,
         )
 
     def _draw_system(self, name: str, system: System, x: float, y: float) -> None:
         label = SYSTEM_LABEL.get(name, name[:2].upper())
-        arcade.draw_text(
-            label, x, y, theme.TEXT_ACCENT, theme.FONT_LABEL_SIZE
+        self._text.draw(
+            ("sys", name), label, x, y, theme.TEXT_ACCENT, theme.FONT_LABEL_SIZE
         )
         bar_x = x + 14
         for i in range(system.level):

@@ -13,6 +13,7 @@ import arcade
 
 from ftl.crew.crew import CrewState
 from ftl.ui import theme
+from ftl.ui.text_cache import TextCache
 
 if TYPE_CHECKING:
     from ftl.combat.engine import CombatEngine
@@ -46,6 +47,7 @@ class CrewPanel:
         self.origin_x: float = origin_x
         self.origin_y: float = origin_y
         self.selected_index: int | None = None
+        self._text = TextCache()
 
     def _player_crew(self) -> list[Crew]:
         # Player home crew, including any boarders currently elsewhere.
@@ -83,12 +85,10 @@ class CrewPanel:
         return None
 
     def draw(self) -> None:
-        arcade.draw_text(
-            "CREW",
-            self.origin_x,
-            self.origin_y - 16,
-            theme.TEXT_DIM,
-            theme.FONT_LABEL_SIZE,
+        self._text.draw(
+            "header", "CREW",
+            self.origin_x, self.origin_y - 16,
+            theme.TEXT_DIM, theme.FONT_LABEL_SIZE,
         )
         crew_list = self._player_crew()
         for i, crew in enumerate(crew_list):
@@ -101,7 +101,8 @@ class CrewPanel:
                 left, bottom, w, h, theme.COLOR_ROOM_OUTLINE
             )
             # Name + species
-            arcade.draw_text(
+            self._text.draw(
+                ("name", i),
                 f"{crew.name} ({crew.species.name})",
                 left + 6,
                 bottom + h - theme.FONT_LABEL_SIZE - 3,
@@ -112,12 +113,11 @@ class CrewPanel:
             label_parts: list[str] = [_STATE_LABELS.get(crew.state, "idle")]
             if crew.home_ship is not crew.current_ship:
                 label_parts.append("BOARDER")
-            arcade.draw_text(
+            self._text.draw(
+                ("status", i),
                 " · ".join(label_parts),
-                left + 6,
-                bottom + 4,
-                theme.TEXT_DIM,
-                theme.FONT_LABEL_SIZE,
+                left + 6, bottom + 4,
+                theme.TEXT_DIM, theme.FONT_LABEL_SIZE,
             )
             # HP bar
             hp_frac = max(0.0, min(1.0, crew.hp / max(1, crew.max_hp)))

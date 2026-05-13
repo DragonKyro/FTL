@@ -67,8 +67,15 @@ _EVENT_DIRS_BY_SECTOR: dict[str, tuple[str, ...]] = {
 # --- run start --------------------------------------------------------
 
 
-def start_run(game: Game, window: arcade.Window, player_ship_id: str) -> None:
+def start_run(
+    game: Game,
+    window: arcade.Window,
+    player_ship_id: str,
+    *,
+    scenario_id: str | None = None,
+) -> None:
     run = game.new_run()
+    run.scenario_id = scenario_id
     run.sector_chain = list(_SECTOR_CHAIN)
     run.sector_index = 0
     run.sectors_total = len(_SECTOR_CHAIN)
@@ -80,6 +87,26 @@ def start_run(game: Game, window: arcade.Window, player_ship_id: str) -> None:
     run.fuel = 16
     run.drone_parts = 2
     _open_current_sector(game, window)
+
+
+def start_run_from_scenario(
+    game: Game, window: arcade.Window, scenario_id: str
+) -> None:
+    """Hangar entry point: pick a scenario by id, launch its starting ship."""
+    scenario = game.registry.scenarios[scenario_id]
+    start_run(game, window, scenario.player_ship, scenario_id=scenario_id)
+
+
+def resume_run(game: Game, window: arcade.Window) -> None:
+    """Drop the player back onto the current sector's star map.
+
+    Used by save/load: persistence reconstructs `game.run`; this just
+    hands off to the star map scene."""
+    from ftl.scenes.star_map_scene import StarMapScene
+
+    if game.run is None:
+        return
+    window.show_view(StarMapScene(game))
 
 
 def _open_current_sector(game: Game, window: arcade.Window) -> None:
@@ -275,3 +302,15 @@ def _advance_sector_or_boss(game: Game, window: arcade.Window) -> None:
         _start_combat_with_enemy(game, window, "throne_of_ash", is_boss=True)
         return
     _open_current_sector(game, window)
+    _autosave_silently(run)
+
+
+def _autosave_silently(run) -> None:  # type: ignore[no-untyped-def]
+    """Best-effort autosave on sector entry. Failures are swallowed —
+    we don't want a write hiccup to interrupt the run."""
+    try:
+        from ftl.persistence.save import save_run
+
+        save_run(run, "autosave")
+    except (OSError, ValueError):
+        pass

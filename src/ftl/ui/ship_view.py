@@ -1,10 +1,10 @@
 """Renders one ship at tile granularity.
 
-Each tile is a colored square. Oxygen drives the tile fill color. Crew
-ride on their current tile as colored circles. Doors are short bright
-lines on the room boundary. The view exposes hit-testing for tiles,
-rooms, and doors so the CombatScene can drive selection / targeting /
-door-toggle from clicks.
+Phase 4 polish: tile fills now use a baked rounded-panel texture with
+gradient + soft inner shadow; crew are gradient orbs with halo glow;
+shield layers are soft halos instead of flat outlines. The view exposes
+hit-testing for tiles, rooms, and doors so the CombatScene can drive
+selection / targeting / door-toggle from clicks.
 """
 
 from __future__ import annotations
@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING
 
 import arcade
 
-from ftl.ui import theme
+from ftl.ui import art, theme
+from ftl.ui.text_cache import TextCache
 
 if TYPE_CHECKING:
     from ftl.crew.crew import Crew
@@ -37,7 +38,22 @@ _SPECIES_COLORS: dict[str, tuple[int, int, int]] = {
     "mhirsa": (220, 130, 80),
     "choir": (180, 220, 250),
     "yssari": (140, 220, 180),
+    "ferran": (180, 130, 220),
+    "loam": (160, 200, 130),
+    "drevant": (210, 170, 110),
 }
+
+
+def _species_color(species_id: str) -> tuple[int, int, int]:
+    return _SPECIES_COLORS.get(species_id, (200, 200, 210))
+
+
+def _lighten(c: tuple[int, int, int], amount: float = 0.55) -> tuple[int, int, int]:
+    return (
+        min(255, int(c[0] + (255 - c[0]) * amount)),
+        min(255, int(c[1] + (255 - c[1]) * amount)),
+        min(255, int(c[2] + (255 - c[2]) * amount)),
+    )
 
 
 class ShipView:
@@ -67,6 +83,11 @@ class ShipView:
             theme.TEXT_PRIMARY,
             theme.FONT_BODY_SIZE,
         )
+        self._tile_tex_cache: dict[tuple[int, int, int], arcade.Texture] = {}
+        self._crew_tex_cache: dict[tuple[int, int, int], arcade.Texture] = {}
+        self._fire_tex: arcade.Texture | None = None
+        self._shadow_tex: arcade.Texture | None = None
+        self._text = TextCache()
 
     # --- coordinate math --------------------------------------------------
 
@@ -124,6 +145,7 @@ class ShipView:
         selected_crew: Crew | None = None,
         visibility: int = 4,
     ) -> None:
+        self._draw_ship_shadow()
         self._title_text.draw()
         self._draw_hull_bar()
         self._draw_tiles(targeted_room_id, visibility)
@@ -131,6 +153,19 @@ class ShipView:
         self._draw_shield_ring()
         if visibility >= 3:
             self._draw_crew(selected_crew)
+
+    def _draw_ship_shadow(self) -> None:
+        if self._shadow_tex is None:
+            self._shadow_tex = art.drop_shadow(
+                (self._max_x + 1) * TILE_PX,
+                (self._max_y + 1) * TILE_PX,
+                radius=12,
+            )
+        cx, cy = self.center()
+        art.draw_centered(
+            self._shadow_tex, cx, cy - 6,
+            size=None,
+        )
 
     def _draw_hull_bar(self) -> None:
         bar_w = (self._max_x + 1) * TILE_PX
@@ -147,13 +182,33 @@ class ShipView:
         arcade.draw_lbwh_rectangle_outline(
             self.origin_x, bar_y, bar_w, HULL_BAR_HEIGHT, theme.COLOR_ROOM_OUTLINE
         )
-        arcade.draw_text(
+        self._text.draw(
+            "hull",
             f"HULL {hull.current}/{hull.maximum}",
-            self.origin_x + bar_w + 8,
-            bar_y - 2,
-            theme.TEXT_DIM,
-            theme.FONT_LABEL_SIZE,
+            self.origin_x + bar_w + 8, bar_y - 2,
+            theme.TEXT_DIM, theme.FONT_LABEL_SIZE,
         )
+
+    def _tile_texture(self, fill: tuple[int, int, int]) -> arcade.Texture:
+        key = fill
+        tex = self._tile_tex_cache.get(key)
+        if tex is None:
+            top = (
+                min(255, fill[0] + 18),
+                min(255, fill[1] + 18),
+                min(255, fill[2] + 22),
+            )
+            bottom = (
+                max(0, fill[0] - 10),
+                max(0, fill[1] - 10),
+                max(0, fill[2] - 12),
+            )
+            tex = art.rounded_panel(
+                TILE_PX, TILE_PX, top, bottom,
+                radius=5, border=(20, 24, 32), border_w=1, shadow=False,
+            )
+            self._tile_tex_cache[key] = tex
+        return tex
 
     def _draw_tiles(self, targeted_room_id: str | None, visibility: int) -> None:
         show_oxygen_tint = visibility >= 2
@@ -169,17 +224,26 @@ class ShipView:
                 fill = self._tile_fill_color(room)
             else:
                 fill = (32, 36, 44)  # foggy unknown
-            arcade.draw_lbwh_rectangle_filled(left, bottom, TILE_PX, TILE_PX, fill)
-            arcade.draw_lbwh_rectangle_outline(
-                left, bottom, TILE_PX, TILE_PX, (30, 35, 45)
+            tex = self._tile_texture(fill)
+            arcade.draw_texture_rect(
+                tex, arcade.LBWH(left, bottom, TILE_PX, TILE_PX)
             )
             if show_fire_breach and room.fire > 0:
                 intensity = min(1.0, room.fire / 100.0)
                 tint: tuple[int, int, int] = (255, int(140 - 60 * intensity), 40)
+                if self._fire_tex is None:
+                    self._fire_tex = art.soft_circle(32, (255, 140, 40), alpha=210)
+                size = (12 + 12 * intensity)
+                art.draw_centered(
+                    self._fire_tex,
+                    left + TILE_PX / 2,
+                    bottom + TILE_PX / 2,
+                    size=size,
+                )
                 arcade.draw_circle_filled(
                     left + TILE_PX / 2,
                     bottom + TILE_PX / 2,
-                    6 + 6 * intensity,
+                    3 + 2 * intensity,
                     tint,
                 )
             if show_fire_breach and room.breach > 0:
@@ -214,12 +278,11 @@ class ShipView:
             return
         first = room.tiles[0]
         left, bottom = self.tile_to_screen(first)
-        arcade.draw_text(
+        self._text.draw(
+            ("room_label", room.id),
             room.system.name.upper()[:5],
-            left + 3,
-            bottom + TILE_PX - theme.FONT_LABEL_SIZE - 3,
-            theme.TEXT_PRIMARY,
-            theme.FONT_LABEL_SIZE,
+            left + 3, bottom + TILE_PX - theme.FONT_LABEL_SIZE - 3,
+            theme.TEXT_PRIMARY, theme.FONT_LABEL_SIZE,
         )
         system: System = room.system
         for i in range(system.level):
@@ -285,14 +348,15 @@ class ShipView:
         cx, cy = self.center()
         radius = max(self._max_x + 1, self._max_y + 1) * TILE_PX / 2 + 14
         for layer_idx in range(shields.max_layers):
+            is_active = layer_idx < shields.current_layers
             color = (
                 theme.COLOR_SHIELDS
-                if layer_idx < shields.current_layers
+                if is_active
                 else theme.COLOR_SHIELDS_DIM
             )
-            arcade.draw_circle_outline(
-                cx, cy, radius + layer_idx * 6, color, border_width=2
-            )
+            r = radius + layer_idx * 8
+            tex = art.shield_halo(int(r * 2.2), color, intensity=1.0 if is_active else 0.4)
+            art.draw_centered(tex, cx, cy, size=r * 2.2)
 
     def _draw_crew(self, selected_crew: Crew | None) -> None:
         per_tile_count: dict[tuple[int, int], int] = {}
@@ -304,8 +368,19 @@ class ShipView:
             per_tile_count[key] = stack + 1
             cx, cy = self.tile_center(crew.current_tile)
             offset = (stack - 1) * 4
-            color = _SPECIES_COLORS.get(crew.species.id, (200, 200, 200))
-            arcade.draw_circle_filled(cx + offset, cy, CREW_RADIUS, color)
+            outer = _species_color(crew.species.id)
+            inner = _lighten(outer, 0.55)
+            tex = self._crew_tex_cache.get(outer)
+            if tex is None:
+                tex = (
+                    art.disk_texture(f"crew/{crew.species.id}")
+                    or art.radial_orb(
+                        40, inner, outer,
+                        rim=(20, 22, 30), halo=1.25, highlight=True,
+                    )
+                )
+                self._crew_tex_cache[outer] = tex
+            art.draw_centered(tex, cx + offset, cy, size=CREW_RADIUS * 2.6)
             if crew.home_ship is not self.ship:
                 arcade.draw_circle_outline(
                     cx + offset, cy, CREW_RADIUS + 2, theme.COLOR_BREACH, border_width=2

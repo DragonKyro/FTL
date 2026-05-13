@@ -1,6 +1,6 @@
 id: pilgrim_path
-name: Pilgrim Path
-description: A Choral Order pilgrim ship transports a relic past Black Vein patrols.
+name: The Pilgrim Path
+description: A Choral Order pilgrim ship carries a Lattice relic past Black Vein raiders and Concordat blockades.
 player_ship: pilgrim
 enemy_ship: vein_skiff
 ai_profile: skiff

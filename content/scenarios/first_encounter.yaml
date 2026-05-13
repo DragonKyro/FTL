@@ -1,6 +1,6 @@
 id: first_encounter
-name: First Encounter
-description: A Black Vein skiff jumps your ship in the Borderlands. Survive or flee.
+name: The Wayfarer Run
+description: A weathered scout-courier slipping past Black Vein patrols on its way to the Concordat warfront.
 player_ship: wayfarer
 enemy_ship: vein_skiff
 ai_profile: skiff
