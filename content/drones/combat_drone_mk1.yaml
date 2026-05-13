@@ -1,6 +1,6 @@
 id: combat_drone_mk1
-name: Combat Drone Mk I
-description: Orbital drone that fires light pulses at random enemy rooms.
+name: Hornet Mote Mk I
+description: An eager little drone that orbits the enemy and stings at random rooms.
 family: combat
 power_required: 2
 damage: 1

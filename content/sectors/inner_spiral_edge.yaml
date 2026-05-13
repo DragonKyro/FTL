@@ -1,0 +1,10 @@
+id: inner_spiral_edge
+name: Inner Spiral Edge
+description: Approach lanes to the wealthy core. Consilium patrols are common; bureaucracy follows.
+faction: consilium_of_stars
+theme: inner_spiral
+event_pools:
+  - generic
+  - consilium
+min_beacons: 10
+max_beacons: 14

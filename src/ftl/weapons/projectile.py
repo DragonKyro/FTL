@@ -22,9 +22,12 @@ class Projectile:
     target_room_id: str
     damage: int
     shield_piercing: bool
-    weapon_family: str  # "laser" | "missile" | "beam" | "hacking_drone" | ...
+    weapon_family: str  # "laser" | "missile" | "beam" | "bomb" | "ion" | "flak" | "hacking_drone"
     fire_chance: float = 0.0
     breach_chance: float = 0.0
+    ion_damage: int = 0
+    beam_length: int = 0          # for beams: how many rooms to sweep
+    beam_room_damage: int = 0     # damage per room
     travel_time: float = 1.0
     elapsed: float = 0.0
     # Optional payload — used by hacking drones to identify which system

@@ -43,6 +43,8 @@ class MindControlSystem(System):
             return False
         if self.is_active:
             return False
+        if getattr(target.behavior, "mind_control_immune", False):
+            return False
         self.target_crew = target
         self._original_team = target.team
         target.team = self._opposite_team(target.team)

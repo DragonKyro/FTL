@@ -1,0 +1,31 @@
+id: verge_corvette
+name: Mercatile Verge Corvette
+description: A Mercatile Verge toll-enforcement runner. Sensors-1, doors level 1, three crew.
+max_hull: 14
+max_reactor_power: 6
+starting_missiles: 2
+rooms:
+  - { id: bridge,      x: 0, y: 0, system: piloting }
+  - { id: gun_bay,     x: 1, y: 0, system: weapons }
+  - { id: shield_room, x: 2, y: 0, system: shields }
+  - { id: sensor_pod,  x: 0, y: 1, system: sensors }
+  - { id: medbay,      x: 1, y: 1, system: medbay }
+  - { id: oxygen_room, x: 2, y: 1, system: oxygen }
+  - { id: doors_room,  x: 1, y: 2, system: doors }
+starting_systems:
+  - piloting
+  - weapons
+  - shields
+  - sensors
+  - medbay
+  - oxygen
+  - doors
+starting_weapons:
+  - pulse_lance_mk1
+  - splinter_missile_mk1
+starting_drones: []
+starting_augments: []
+starting_crew:
+  - sapien
+  - sapien
+  - sapien

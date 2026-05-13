@@ -1,0 +1,9 @@
+id: echo_coil_mk1
+name: Echo Coil Mk I
+description: A subspace pulse that ionizes whatever it touches. No hull damage, but the lights go out.
+family: ion
+damage: 0
+ion_damage: 2
+charge_time: 12.0
+power_required: 1
+cost: 65

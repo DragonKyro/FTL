@@ -1,0 +1,18 @@
+id: customs_inspection
+name: Consilium Customs Inspection
+text: |
+  A Consilium patrol slides up alongside, transponder polite, weapons
+  cold. They request a routine cargo inspection. Refusal is its own
+  kind of statement.
+choices:
+  - text: "Open the hold. Comply fully."
+    outcome_id: comply
+  - text: "Refuse. Burn for the next beacon."
+    outcome_id: refuse
+outcomes:
+  comply:
+    text: "They find nothing of interest, log the encounter, and wave you on."
+  refuse:
+    text: "Two corvettes paint your hull red. The patrol leader is no longer polite."
+    starts_combat: true
+    enemy_ship_id: consilium_lancer

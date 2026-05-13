@@ -1,0 +1,12 @@
+id: drevant
+name: Drevant
+description: Three-armed, eyeless engineers. They feel heat and current through their palms; faster at repairs.
+max_hp: 100
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.5
+combat_damage: 1.0
+traits:
+  - engineer

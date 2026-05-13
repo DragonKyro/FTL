@@ -108,6 +108,8 @@ def _move_time_for(crew: Crew) -> float:
 
 def _reassign_manning(ship: Ship) -> None:
     """One crew per system mans it. Boarders don't man enemy systems."""
+    from ftl.crew.xp import award_manning_xp
+
     # Clear existing assignments.
     for system in ship.systems.values():
         system.manning_crew = None
@@ -128,6 +130,11 @@ def _reassign_manning(ship: Ship) -> None:
                 continue
             if crew.current_tile.room_id == host_room.id:
                 system.manning_crew = crew
+                # Award manning XP this tick (called every tick from
+                # tick_movement; passing the global dt isn't trivial here,
+                # so we sneak a small fixed accrual per tick — equivalent
+                # to ~0.5 XP/sec at 60Hz).
+                award_manning_xp(crew, system_name, 1.0 / 60.0)
                 break
 
 
@@ -190,9 +197,15 @@ def _assign_tasks(ship: Ship, dt: float) -> None:
 
 def _tick_repair(crew: Crew, system: System, dt: float) -> None:
     """Apply repair to a system, with per-crew sub-bar accumulation."""
+    from ftl.crew.xp import award_repair_xp
+
     crew.repair_accum += REPAIR_RATE * crew.species.repair_speed * dt
+    bars_repaired = 0
     while crew.repair_accum >= 1.0 and system.damage > 0:
         system.damage -= 1
         crew.repair_accum -= 1.0
+        bars_repaired += 1
+    if bars_repaired:
+        award_repair_xp(crew, bars=bars_repaired)
     if system.damage == 0:
         crew.repair_accum = 0.0

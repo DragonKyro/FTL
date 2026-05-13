@@ -1,0 +1,7 @@
+id: riveted_plating
+name: Riveted Plating
+description: Scrap plates and rivets welded over the original frame. The Wayfarer can take five more hits.
+effect_id: riveted_plating
+value: 5.0
+rarity: 1
+cost: 55

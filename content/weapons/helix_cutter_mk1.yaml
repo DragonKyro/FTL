@@ -1,0 +1,10 @@
+id: helix_cutter_mk1
+name: Helix Cutter Mk I
+description: An emerald cutting beam in the cadence of the failing Helix Gates. Blocked entirely by a shield layer.
+family: beam
+damage: 0
+beam_length: 3
+beam_room_damage: 2
+charge_time: 18.0
+power_required: 2
+cost: 80

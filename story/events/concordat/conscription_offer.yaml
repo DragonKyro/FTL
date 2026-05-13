@@ -1,0 +1,21 @@
+id: conscription_offer
+name: Iron Concordat Conscription
+text: |
+  An Iron Concordat lieutenant hails. "Independents like you are wasted
+  in the borderlands. Sign with us. We'll buy your ship out and put you
+  on a Throne-line escort by next quarter." Their offer is genuine. So
+  is the threat in their second sentence.
+choices:
+  - text: "Sign. Take their scrap."
+    outcome_id: accept
+  - text: "Refuse. Burn the channel."
+    outcome_id: refuse
+outcomes:
+  accept:
+    text: "Two minutes of paperwork. A meaningful bonus arrives in your accounts."
+    scrap: 40
+    set_flags: [concordat_aligned]
+  refuse:
+    text: "The lieutenant takes it personally."
+    starts_combat: true
+    enemy_ship_id: concordat_seraph

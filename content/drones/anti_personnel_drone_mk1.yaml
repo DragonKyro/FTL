@@ -1,6 +1,6 @@
 id: anti_personnel_drone_mk1
-name: Anti-Personnel Drone Mk I
-description: Deploys on the host teleporter pad as a synthetic defender unit.
+name: Bulwark Mote Mk I
+description: A short-tempered defender that drops on your own pad and fights anything that isn't ours.
 family: anti_personnel
 power_required: 2
 drone_parts_cost: 1

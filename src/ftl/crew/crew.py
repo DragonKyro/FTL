@@ -69,7 +69,7 @@ class Crew:
         self.move_progress: float = 0.0
         self.repair_accum: float = 0.0
         self.clone_progress: float = 0.0
-        self.skills: dict[Skill, int] = {s: 0 for s in Skill}
+        self.skills: dict[Skill, float] = {s: 0.0 for s in Skill}
 
     @property
     def alive(self) -> bool:

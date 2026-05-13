@@ -1,0 +1,13 @@
+id: loam
+name: Loam
+description: Fungal collective bodies. Patient, ancient, and quietly self-mending.
+max_hp: 110
+move_speed: 0.7
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.0
+combat_damage: 1.0
+traits:
+  - passive_regen
+  - colony_memory

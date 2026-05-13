@@ -1,0 +1,18 @@
+id: derelict_lattice_node
+name: Derelict Lattice Node
+text: |
+  A dead Lattice substrate-node tumbles in slow rotation. Its surface is
+  intact; the dim interior may still hold salvageable processing cores.
+  Boarding might be lucrative — or it might pull the Lattice's attention.
+choices:
+  - text: "Salvage the cores."
+    outcome_id: salvage
+  - text: "Leave it tumbling."
+    outcome_id: skip
+outcomes:
+  salvage:
+    text: "You pry loose three intact cores. Useful scrap."
+    scrap: 25
+    set_flags: [touched_a_lattice_node]
+  skip:
+    text: "You log the position and move on."

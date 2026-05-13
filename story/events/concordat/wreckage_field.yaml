@@ -1,0 +1,24 @@
+id: wreckage_field
+name: Concordat Wreckage Field
+text: |
+  A field of dead Concordat ships drifts here — leftovers from a Sealing
+  Crisis skirmish. Plenty of scrap. Also plenty of Quarantine Warden
+  attention if you're loud about it.
+choices:
+  - text: "Loot greedily. Take the risk."
+    outcome_id: loot
+  - text: "Salvage modestly. Stay quiet."
+    outcome_id: modest
+  - text: "Move on."
+    outcome_id: skip
+outcomes:
+  loot:
+    text: "You strip everything that moves. A Warden hails as you depart — not friendly."
+    scrap: 60
+    hull_damage: 4
+    set_flags: [warden_noticed]
+  modest:
+    text: "A quiet hour of careful work pays well enough."
+    scrap: 22
+  skip:
+    text: "You log the field for someone else and move on."

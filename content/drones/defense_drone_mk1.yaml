@@ -1,6 +1,6 @@
 id: defense_drone_mk1
-name: Defense Drone Mk I
-description: Orbits the host ship, shoots down incoming missiles.
+name: Aegis Mote Mk I
+description: A petal-quick interceptor that shears incoming missiles out of vacuum.
 family: defense
 power_required: 2
 drone_parts_cost: 1

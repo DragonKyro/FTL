@@ -1,0 +1,19 @@
+id: refugee_pod
+name: Refugee Pod
+text: |
+  A battered family pod is drifting between beacons, oxygen low. The
+  family inside lost their home when a Gate sealed without warning.
+  They've got nothing — not even a name for where they're trying to get.
+choices:
+  - text: "Take them aboard. Share rations."
+    outcome_id: aboard
+  - text: "Refuse. You can't afford the mouths."
+    outcome_id: refuse
+outcomes:
+  aboard:
+    text: "They board with quiet thanks. One offers their handful of scrap as payment for whatever you'll take of it."
+    scrap: 10
+    set_flags: [helped_refugees]
+  refuse:
+    text: "You watch the pod's lights dim through your aft screen."
+    clear_flags: [helped_a_civilian]

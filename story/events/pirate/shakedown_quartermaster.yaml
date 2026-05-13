@@ -1,0 +1,19 @@
+id: shakedown_quartermaster
+name: Black Vein Quartermaster
+text: |
+  A pock-marked Black Vein quartermaster pings your channel. "Toll for
+  the lane. Twenty scrap." Behind her, three lit-up weapon racks make
+  the offer feel less optional.
+choices:
+  - text: "Pay the toll. 20 scrap."
+    outcome_id: pay
+  - text: "Refuse. Whatever happens, happens."
+    outcome_id: refuse
+outcomes:
+  pay:
+    text: "She nods, the lane opens, the racks go dark."
+    scrap: -20
+  refuse:
+    text: "The lit-up racks become firing-rack-shaped problems."
+    starts_combat: true
+    enemy_ship_id: vein_skiff

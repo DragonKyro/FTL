@@ -22,9 +22,10 @@ MAX_VISIBILITY: int = 4
 
 def enemy_visibility(viewer: Ship) -> int:
     sensors = viewer.systems.get("sensors")
+    bonus = getattr(viewer, "sensors_bonus", 0)
     if sensors is None or not sensors.is_operational:
-        return 1
+        return min(MAX_VISIBILITY, max(1, 1 + bonus))
     base = sensors.effective_power
     if sensors.manning_crew is not None:
         base += 1
-    return min(MAX_VISIBILITY, max(1, base))
+    return min(MAX_VISIBILITY, max(1, base + bonus))

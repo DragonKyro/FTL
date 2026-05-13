@@ -1,0 +1,13 @@
+id: black_vein_ambush
+name: Black Vein Ambush
+text: |
+  Three Black Vein silhouettes peel out from behind a rock. No hail.
+  Just a weapon-charge whine across the channel.
+choices:
+  - text: "Battle stations."
+    outcome_id: fight
+outcomes:
+  fight:
+    text: "The skiff captain doesn't bother with words."
+    starts_combat: true
+    enemy_ship_id: vein_skiff

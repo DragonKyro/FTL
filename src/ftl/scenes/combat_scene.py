@@ -418,9 +418,21 @@ class CombatScene(Scene):
         )
 
     def _goto_game_over(self, outcome: Outcome) -> None:
+        # Phase 4: route through the scene-flow controller so wins return
+        # to the star map and losses → game over. Boss flag stored by the
+        # flow controller when it created this scene.
+        from ftl.scenes.flow import after_combat_loss, after_combat_win
         from ftl.scenes.game_over import GameOverScene
 
-        self.window.show_view(GameOverScene(self.game, outcome))
+        is_boss = getattr(self, "_is_boss", False)
+        if self.window is None or self.game is None:
+            return
+        if outcome is Outcome.WON:
+            after_combat_win(self.game, self.window, is_boss)
+        elif outcome is Outcome.LOST:
+            after_combat_loss(self.game, self.window)
+        else:  # FLED or any other terminal
+            self.window.show_view(GameOverScene(self.game, outcome))
 
     def _return_to_menu(self) -> None:
         from ftl.scenes.main_menu import MainMenuScene

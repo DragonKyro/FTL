@@ -1,0 +1,11 @@
+id: the_borderlands
+name: The Borderlands
+description: Frontier lanes patrolled by the Mercatile Verge and prowled by Black Vein crews.
+faction: mercatile_verge
+theme: frontier
+event_pools:
+  - generic
+  - civilian
+  - pirate
+min_beacons: 10
+max_beacons: 14

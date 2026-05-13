@@ -47,8 +47,15 @@ class ShieldsSystem(System):
         if not self.is_operational:
             self.recharge_progress = 0.0
             return
-        # Manning the shields room speeds recharge by ~11% (-10% recharge time).
-        manning_mult = 1.0 / 0.9 if self.manning_crew is not None else 1.0
+        # Manning the shields room speeds recharge by ~11% (-10% recharge time);
+        # skill scales the bonus 1.0×–2.0×.
+        if self.manning_crew is not None:
+            from ftl.crew.xp import manning_bonus_multiplier
+
+            skill_mult = manning_bonus_multiplier(self.manning_crew, "shields")
+            manning_mult = 1.0 + (1.0 / 0.9 - 1.0) * skill_mult
+        else:
+            manning_mult = 1.0
         self.recharge_progress += dt * manning_mult
         while (
             self.recharge_progress >= RECHARGE_TIME_PER_LAYER

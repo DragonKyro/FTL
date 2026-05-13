@@ -1,0 +1,20 @@
+id: distress_chord
+name: Distress Chord
+text: |
+  A high-pitched chord swells in your sensors — an Echo-tuned distress
+  signal, faintly familiar. It's coming from a small civilian transport
+  drifting nearby. Engines dead, pressure venting. They're going to die
+  unless someone hooks a tow.
+choices:
+  - text: "Hook the tow. Spend a missile-worth of fuel."
+    outcome_id: tow
+  - text: "Broadcast condolences. Move on."
+    outcome_id: ignore
+outcomes:
+  tow:
+    text: "The transport crew thank you. They press a thread of scrap into your hands as they disembark."
+    scrap: 30
+    fuel: -1
+    set_flags: [helped_a_civilian]
+  ignore:
+    text: "The signal goes silent before you exit the beacon."

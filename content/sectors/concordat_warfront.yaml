@@ -1,0 +1,10 @@
+id: concordat_warfront
+name: Concordat Warfront
+description: Iron Concordat war-zone. Conscription officers, wreckage fields, and the Throne of Ash beyond the exit.
+faction: iron_concordat
+theme: warfront
+event_pools:
+  - generic
+  - concordat
+min_beacons: 10
+max_beacons: 14

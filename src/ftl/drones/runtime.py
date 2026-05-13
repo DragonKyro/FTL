@@ -41,13 +41,15 @@ def tick_drones(
         if drone_control is not None and drone_control.is_operational
         else 0
     )
+    discount = getattr(ship, "drone_power_discount", 0)
     for drone in ship.drones:
         if not drone.alive:
             drone.powered = False
             continue
-        if drone.stats.power_required <= budget:
+        cost = max(0, drone.stats.power_required - discount)
+        if cost <= budget:
             drone.powered = True
-            budget -= drone.stats.power_required
+            budget -= cost
         else:
             drone.powered = False
         if not drone.powered:

@@ -1,6 +1,6 @@
 id: boarding_drone_mk1
-name: Boarding Drone Mk I
-description: Teleport-launched chassis. Drops onto the enemy ship as a synthetic crew unit.
+name: Lance Mote Mk I
+description: A teleport-launched chassis that lands as a synthetic crew unit on the enemy ship.
 family: boarding
 power_required: 3
 drone_parts_cost: 1

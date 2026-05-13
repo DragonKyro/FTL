@@ -1,0 +1,18 @@
+id: asteroid_fold
+name: Asteroid Fold
+text: |
+  Your sensors paint a slow-rolling fold of ice and rock — a Vyrnari-era
+  debris stream, hundreds of kilometers thick. The shortest line through
+  is fast and rattling; the long burn around is slow and expensive.
+choices:
+  - text: "Thread the fold. Hold breath and brace."
+    outcome_id: thread
+  - text: "Burn around. Lose a missile of fuel-equivalent in detours."
+    outcome_id: burn_around
+outcomes:
+  thread:
+    text: "Three rocks score the hull. You're through."
+    hull_damage: 2
+  burn_around:
+    text: "Long, quiet detour. The Wayfarer hums, lights warm, and one missile of yours falls behind in the maneuver."
+    missiles: -1

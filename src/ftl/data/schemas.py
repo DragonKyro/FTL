@@ -37,9 +37,12 @@ class WeaponDef(ContentDef):
     ion_damage: int = 0
     crew_damage: int = 0
     system_damage: int = 0
-    beam_length: float = 0.0
+    beam_length: int = 0
+    beam_room_damage: int = 0
+    projectile_count: int = 1
     missile_cost: int = 0
     power_required: int = 1
+    cost: int = 50
     sprite_key: str = ""
     sfx_key: str = ""
 
@@ -57,15 +60,17 @@ class DroneDef(ContentDef):
     speed: float = 1.0
     damage: int = 0
     drone_parts_cost: int = 1
+    cost: int = 50
 
 
 # --- Augments ----------------------------------------------------------------
 
 
 class AugmentDef(ContentDef):
-    hook: str = ""
+    effect_id: str = ""
     value: float = 0.0
     rarity: int = 1
+    cost: int = 50
 
 
 # --- Species -----------------------------------------------------------------
@@ -140,12 +145,30 @@ class SectorDef(ContentDef):
 class EventChoiceDef(BaseModel):
     text: str
     outcome_id: str | None = None
+    requires_species: str | None = None  # only show if this species is aboard
+
+
+class OutcomeDef(BaseModel):
+    text: str = ""
+    scrap: int = 0
+    fuel: int = 0
+    missiles: int = 0
+    drone_parts: int = 0
+    hull_damage: int = 0
+    hull_repair: int = 0
+    starts_combat: bool = False
+    enemy_ship_id: str | None = None
+    set_flags: list[str] = Field(default_factory=list)
+    clear_flags: list[str] = Field(default_factory=list)
+    recruit_species_id: str | None = None
 
 
 class EventDef(ContentDef):
     text: str = ""
     choices: list[EventChoiceDef] = Field(default_factory=list)
+    outcomes: dict[str, OutcomeDef] = Field(default_factory=dict)
     triggers: list[str] = Field(default_factory=list)
+    species_locked: str | None = None  # only spawn if a crew of this species is aboard
 
 
 # --- Scenarios ---------------------------------------------------------------

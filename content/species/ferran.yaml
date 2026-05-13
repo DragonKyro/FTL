@@ -1,0 +1,13 @@
+id: ferran
+name: Ferran
+description: Crystalline beings from a high-gravity Crèche World. Slow, polite, and able to lock down rooms by their presence.
+max_hp: 130
+move_speed: 0.5
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 0.0
+repair_speed: 1.0
+combat_damage: 1.0
+traits:
+  - lockdown
+  - vacuum_safe

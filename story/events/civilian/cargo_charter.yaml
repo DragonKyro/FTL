@@ -1,0 +1,18 @@
+id: cargo_charter
+name: Cargo Charter
+text: |
+  A Free Traders agent hails. He needs a small parcel delivered to the
+  next sector — fragile, time-sensitive, "nothing illegal you'd want to
+  know about." Cash on completion.
+choices:
+  - text: "Accept. Stow the parcel."
+    outcome_id: accept
+  - text: "Politely decline."
+    outcome_id: decline
+outcomes:
+  accept:
+    text: "He hands over a sealed case and a generous down payment. Don't open it."
+    scrap: 25
+    set_flags: [carrying_parcel]
+  decline:
+    text: "He shrugs. There'll be other hands."

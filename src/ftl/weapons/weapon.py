@@ -28,9 +28,12 @@ class WeaponStats:
     ion_damage: int = 0
     crew_damage: int = 0
     system_damage: int = 0
-    beam_length: float = 0.0
+    beam_length: int = 0          # how many rooms a beam crosses
+    beam_room_damage: int = 0     # damage applied per room a beam touches
+    projectile_count: int = 1     # >1 for flak / multi-shot
     missile_cost: int = 0
     power_required: int = 1
+    cost: int = 50
     sprite_key: str = ""
     sfx_key: str = ""
 

@@ -1,6 +1,6 @@
 id: hull_repair_drone_mk1
-name: Hull Repair Drone Mk I
-description: Welds the hull from outside while powered.
+name: Mender Mote Mk I
+description: A patient little welder that hugs the hull and stitches it together.
 family: repair
 power_required: 2
 drone_parts_cost: 1

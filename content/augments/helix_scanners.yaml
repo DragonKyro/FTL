@@ -1,0 +1,7 @@
+id: helix_scanners
+name: Helix Scanners
+description: A repurposed Verge customs sensor block; bumps your visibility by one rank, unmanned.
+effect_id: helix_scanners
+value: 1.0
+rarity: 2
+cost: 60

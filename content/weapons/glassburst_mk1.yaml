@@ -1,0 +1,9 @@
+id: glassburst_mk1
+name: Glassburst Mk I
+description: A spray of tumbling glass shards from a salvage-built canister gun. Strips shields fast.
+family: flak
+damage: 1
+charge_time: 14.0
+projectile_count: 3
+power_required: 2
+cost: 60

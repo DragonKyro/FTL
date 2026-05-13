@@ -1,0 +1,7 @@
+id: mote_reactor_link
+name: Mote Reactor Link
+description: A power-bus tweak shaves one bar off every drone you keep aloft.
+effect_id: mote_reactor_link
+value: 1.0
+rarity: 2
+cost: 70

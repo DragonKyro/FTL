@@ -1,8 +1,8 @@
 """Main menu — entry point.
 
-Phase 3 exposes two starting scenarios via hotkey:
-- [N] First Encounter (Wayfarer vs Vein Skiff, medbay path)
-- [P] Pilgrim Path (Pilgrim — Wayfarer with clonebay — vs Vein Skiff)
+Phase 4 starts a full 3-sector run (not a one-off encounter):
+- [N] New Run with the Wayfarer
+- [P] New Run with the Pilgrim (clonebay variant)
 """
 
 from __future__ import annotations
@@ -13,16 +13,10 @@ import arcade
 
 from ftl.config import WINDOW_HEIGHT, WINDOW_TITLE, WINDOW_WIDTH
 from ftl.core.scene import Scene
-from ftl.scenarios.loader import build_combat_from_scenario
-from ftl.scenes.combat_scene import CombatScene
 from ftl.ui import theme
 
 if TYPE_CHECKING:
     from ftl.core.game import Game
-
-
-_FIRST_ENCOUNTER_ID: str = "first_encounter"
-_PILGRIM_PATH_ID: str = "pilgrim_path"
 
 
 class MainMenuScene(Scene):
@@ -30,26 +24,20 @@ class MainMenuScene(Scene):
         super().__init__(game=game)
         self._title = arcade.Text(
             WINDOW_TITLE,
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT * 0.70,
-            theme.TEXT_PRIMARY,
-            theme.FONT_TITLE_SIZE,
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT * 0.70,
+            theme.TEXT_PRIMARY, theme.FONT_TITLE_SIZE,
             anchor_x="center",
         )
         self._subtitle = arcade.Text(
-            "Phase 3 — Every room lives",
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT * 0.62,
-            theme.TEXT_DIM,
-            theme.FONT_BODY_SIZE,
+            "Phase 4 — Run through three sectors to the Throne of Ash",
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT * 0.62,
+            theme.TEXT_DIM, theme.FONT_BODY_SIZE,
             anchor_x="center",
         )
         self._hint = arcade.Text(
-            "[N] First Encounter   [P] Pilgrim Path   [Esc] Quit",
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT * 0.30,
-            theme.TEXT_ACCENT,
-            theme.FONT_BODY_SIZE,
+            "[N] Wayfarer Run   [P] Pilgrim Run   [Esc] Quit",
+            WINDOW_WIDTH / 2, WINDOW_HEIGHT * 0.30,
+            theme.TEXT_ACCENT, theme.FONT_BODY_SIZE,
             anchor_x="center",
         )
 
@@ -66,25 +54,15 @@ class MainMenuScene(Scene):
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol == arcade.key.N and self.game is not None:
-            self._start_scenario(_FIRST_ENCOUNTER_ID)
+            self._start_run("wayfarer")
         elif symbol == arcade.key.P and self.game is not None:
-            self._start_scenario(_PILGRIM_PATH_ID)
+            self._start_run("pilgrim")
         elif symbol == arcade.key.ESCAPE and self.window is not None:
             self.window.close()
 
-    def _start_scenario(self, scenario_id: str) -> None:
+    def _start_run(self, ship_id: str) -> None:
         if self.game is None or self.window is None:
             return
-        run = self.game.new_run()
-        registry = self.game.registry
-        scenario = registry.scenarios[scenario_id]
-        rng = run.rng.stream("combat:0")
-        engine = build_combat_from_scenario(
-            scenario, registry, rng, event_bus=self.game.event_bus
-        )
-        player_def = registry.ships[scenario.player_ship]
-        enemy_def = registry.ships[scenario.enemy_ship]
-        scene = CombatScene(
-            self.game, engine, player_def, enemy_def, scenario_title=scenario.name
-        )
-        self.window.show_view(scene)
+        from ftl.scenes.flow import start_run
+
+        start_run(self.game, self.window, ship_id)

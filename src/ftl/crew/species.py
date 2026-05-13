@@ -50,3 +50,12 @@ class SpeciesBehavior:
     def move_speed_multiplier(self, crew: Crew) -> float:
         """Allow species to scale how fast they walk tile-to-tile."""
         return 1.0
+
+    def manning_bonus(self, crew: Crew, system_name: str) -> float:
+        """Extra evasion / charge / etc. when this species mans the named system."""
+        return 0.0
+
+    @property
+    def mind_control_immune(self) -> bool:
+        """Species immune to mind control (e.g. Yssari)."""
+        return False

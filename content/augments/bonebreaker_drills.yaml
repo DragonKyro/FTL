@@ -1,0 +1,7 @@
+id: bonebreaker_drills
+name: Bonebreaker Drills
+description: A Mhirsa-issued combat regimen that lifts crew melee damage by ten percent.
+effect_id: bonebreaker_drills
+value: 0.10
+rarity: 2
+cost: 50

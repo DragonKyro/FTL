@@ -65,8 +65,17 @@ def _resolve_melee_on_tile(tile_crew: list[Crew], dt: float) -> None:
         # boarders attacking one defender deal full damage each (FTL canon).
         for defender in targets:
             base = attacker.species.combat_damage * MELEE_BASE_DAMAGE_PER_SEC * dt
-            scaled = attacker.behavior.melee_damage(attacker, base)
+            # Augment-level ship melee bonus (Bonebreaker Drills).
+            ship_mult = getattr(
+                getattr(attacker, "current_ship", None),
+                "melee_damage_mult",
+                1.0,
+            )
+            scaled = attacker.behavior.melee_damage(attacker, base) * ship_mult
             defender.hp = max(0.0, defender.hp - scaled)
             attacker.behavior.on_combat_damage_dealt(attacker, defender, scaled)
             if defender.hp <= 0:
                 defender.state = CrewState.DEAD
+                from ftl.crew.xp import award_combat_xp
+
+                award_combat_xp(attacker)

@@ -1,0 +1,7 @@
+id: lattice_threadlink
+name: Lattice Threadlink
+description: A discreet substrate hookup. One in four crew deaths route the threadback to a medbay or clonebay at 1 HP.
+effect_id: lattice_threadlink
+value: 0.25
+rarity: 3
+cost: 90

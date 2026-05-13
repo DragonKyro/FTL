@@ -117,6 +117,11 @@ class Ship:
         # Set per-tick by CombatEngine: when True, opponent is cloaked
         # and our weapons can't charge.
         self.cloak_freeze: bool = False
+        # Augment-derived stats.
+        self.drone_power_discount: int = 0
+        self.sensors_bonus: int = 0
+        self.melee_damage_mult: float = 1.0
+        self.threadlink_revive_chance: float = 0.0
 
     # --- construction --------------------------------------------------------
 
@@ -202,15 +207,25 @@ class Ship:
         return self.rooms.get(tile.room_id)
 
     def evasion_chance(self) -> float:
+        from ftl.crew.xp import manning_bonus_multiplier
+
         base = 0.0
         engines = self.engines
         if engines is not None:
             base = engines.evasion_chance
             if engines.manning_crew is not None:
-                base += 0.05
+                mult = manning_bonus_multiplier(engines.manning_crew, "engines")
+                base += 0.05 * mult
+                base += engines.manning_crew.behavior.manning_bonus(
+                    engines.manning_crew, "engines"
+                )
         piloting = self.systems.get("piloting")
         if piloting is not None and piloting.manning_crew is not None:
-            base += 0.05
+            mult = manning_bonus_multiplier(piloting.manning_crew, "piloting")
+            base += 0.05 * mult
+            base += piloting.manning_crew.behavior.manning_bonus(
+                piloting.manning_crew, "piloting"
+            )
         cap = 0.6
         if self.is_cloaked:
             base += 0.6
@@ -246,13 +261,17 @@ class Ship:
         # 7. Drones — ticked from CombatEngine (need opponent reference).
 
     def _weapons_charge_multiplier(self) -> float:
+        from ftl.crew.xp import manning_bonus_multiplier
+
         if self.cloak_freeze:
             return 0.0
         ws = self.weapons_system
         if ws is None or ws.manning_crew is None:
             return 1.0
-        # -10% charge time = +1/0.9 ≈ +11.1% charge rate.
-        return 1.0 / 0.9
+        # Base manning bonus: +11.1% charge rate (= -10% charge time).
+        # Skill scales it linearly from 1.0× (lvl 0) to 2.0× (lvl 3).
+        skill_mult = manning_bonus_multiplier(ws.manning_crew, "weapons")
+        return 1.0 + (1.0 / 0.9 - 1.0) * skill_mult
 
     # --- factory -------------------------------------------------------------
 
@@ -335,8 +354,11 @@ class Ship:
                 crew_damage=weapon_def.crew_damage,
                 system_damage=weapon_def.system_damage,
                 beam_length=weapon_def.beam_length,
+                beam_room_damage=weapon_def.beam_room_damage,
+                projectile_count=weapon_def.projectile_count,
                 missile_cost=weapon_def.missile_cost,
                 power_required=weapon_def.power_required,
+                cost=weapon_def.cost,
                 sprite_key=weapon_def.sprite_key,
                 sfx_key=weapon_def.sfx_key,
             )

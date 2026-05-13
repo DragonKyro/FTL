@@ -1,0 +1,11 @@
+id: splinter_wedge_mk1
+name: Splinter Wedge
+description: A short-range gate-trick that drops a charge directly inside an enemy room. Bypasses shields.
+family: bomb
+damage: 3
+charge_time: 19.0
+shield_pierce: 5
+breach_chance: 0.30
+missile_cost: 1
+power_required: 1
+cost: 70

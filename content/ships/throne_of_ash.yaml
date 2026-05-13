@@ -1,0 +1,46 @@
+id: throne_of_ash
+name: Throne of Ash
+description: The Iron Concordat dreadnought at the heart of the warfront. Three weapons, a defense mote, six crew, blast doors.
+max_hull: 30
+max_reactor_power: 16
+starting_missiles: 4
+rooms:
+  - { id: bridge,         x: 0, y: 0, system: piloting }
+  - { id: gun_bay,        x: 1, y: 0, system: weapons }
+  - { id: shield_room,    x: 2, y: 0, system: shields }
+  - { id: sensor_pod,     x: 3, y: 0, system: sensors }
+  - { id: medbay,         x: 0, y: 1, system: medbay }
+  - { id: engine_room,    x: 1, y: 1, system: engines }
+  - { id: oxygen_room,    x: 2, y: 1, system: oxygen }
+  - { id: doors_room,     x: 3, y: 1, system: doors }
+  - { id: drone_ctrl,     x: 0, y: 2, system: drone_control }
+  - { id: hacker_room,    x: 1, y: 2, system: hacking }
+  - { id: teleporter_pad, x: 2, y: 2, system: teleporter }
+  - { id: cloak_room,     x: 3, y: 2, system: cloaking }
+starting_systems:
+  - piloting
+  - weapons
+  - shields
+  - sensors
+  - medbay
+  - engines
+  - oxygen
+  - doors
+  - drone_control
+  - hacking
+  - teleporter
+  - cloaking
+starting_weapons:
+  - pulse_lance_mk1
+  - splinter_missile_mk1
+  - helix_cutter_mk1
+starting_drones:
+  - defense_drone_mk1
+starting_augments: []
+starting_crew:
+  - sapien
+  - sapien
+  - sapien
+  - sapien
+  - mhirsa
+  - mhirsa

@@ -1,0 +1,16 @@
+id: patrol_relay
+name: Consilium Patrol Relay
+text: |
+  A weary Consilium patrol asks you to ferry an encrypted relay packet
+  to the next beacon. Standard Bureau business. Pays modestly.
+choices:
+  - text: "Carry the packet."
+    outcome_id: carry
+  - text: "Decline. Not your business."
+    outcome_id: decline
+outcomes:
+  carry:
+    text: "They thank you and authorize a small scrap stipend."
+    scrap: 15
+  decline:
+    text: "They sigh, find another courier."

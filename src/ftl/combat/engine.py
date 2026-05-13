@@ -411,12 +411,38 @@ class CombatEngine:
                         system.manning_crew = None
                 # Drop them from this ship.
                 ship.crew.remove(crew)
-                # If the home ship has a clonebay, queue them for revive.
                 home = crew.home_ship
-                if home is not None:
-                    clonebay = home.systems.get("clonebay")
-                    if clonebay is not None and hasattr(clonebay, "enqueue"):
-                        clonebay.enqueue(crew)
+                if home is None:
+                    continue
+                # Lattice Threadlink augment: 25% chance to revive at 1 HP
+                # at the medbay (or clonebay).
+                threadlink_chance = getattr(home, "threadlink_revive_chance", 0.0)
+                if threadlink_chance > 0 and self.rng.random() < threadlink_chance:
+                    revive_room = self._first_room_with_system(home, "medbay") \
+                        or self._first_room_with_system(home, "clonebay")
+                    if revive_room is not None and revive_room.tiles:
+                        crew.hp = 1.0
+                        crew.state = CrewState.IDLE
+                        crew.current_ship = home
+                        crew.current_tile = revive_room.tiles[0]
+                        crew.path = []
+                        crew.move_progress = 0.0
+                        if crew not in home.crew:
+                            home.crew.append(crew)
+                        continue
+                # Otherwise, if a clonebay exists, queue for clone revive.
+                clonebay = home.systems.get("clonebay")
+                if clonebay is not None and hasattr(clonebay, "enqueue"):
+                    clonebay.enqueue(crew)
+
+    def _first_room_with_system(self, ship: Ship, system_name: str):  # type: ignore[no-untyped-def]
+        target = ship.systems.get(system_name)
+        if target is None:
+            return None
+        for room in ship.rooms.values():
+            if room.system is target:
+                return room
+        return None
 
     # --- internals -------------------------------------------------------
 
@@ -432,17 +458,23 @@ class CombatEngine:
                 continue
             if weapon.consumes_missile and inventory.missiles < weapon.stats.missile_cost:
                 continue
-            projectile = self._spawn_projectile(weapon, shooter, target_ship)
+            count = max(1, weapon.stats.projectile_count)
+            for _ in range(count):
+                projectile = self._spawn_projectile(weapon, shooter, target_ship)
+                self.projectiles.append(projectile)
+                self._publish(WeaponFired(projectile))
             weapon.reset_charge()
             if weapon.consumes_missile:
                 inventory.missiles -= weapon.stats.missile_cost
-            self.projectiles.append(projectile)
-            self._publish(WeaponFired(projectile))
+            # Weapon XP for the crew currently manning weapons.
+            from ftl.crew.xp import award_weapon_xp
+
+            ws = shooter.weapons_system
+            award_weapon_xp(ws.manning_crew if ws is not None else None)
 
     def _spawn_projectile(
         self, weapon: Weapon, shooter: Ship, target_ship: Ship
     ) -> Projectile:
-        # weapon.target_room_id is guaranteed not-None by _try_fire_weapons.
         target_room_id = weapon.target_room_id
         assert target_room_id is not None
         return Projectile(
@@ -454,6 +486,9 @@ class CombatEngine:
             weapon_family=weapon.stats.family,
             fire_chance=weapon.stats.fire_chance,
             breach_chance=weapon.stats.breach_chance,
+            ion_damage=weapon.stats.ion_damage,
+            beam_length=weapon.stats.beam_length,
+            beam_room_damage=weapon.stats.beam_room_damage,
             travel_time=PROJECTILE_TRAVEL_TIME,
         )
 
@@ -470,8 +505,57 @@ class CombatEngine:
                 if try_intercept(projectile, projectile.target_ship, self.rng):
                     self.projectiles.remove(projectile)
                     continue
+                # Beams sweep across multiple rooms.
+                if projectile.weapon_family == "beam":
+                    self._resolve_beam(projectile)
+                    self.projectiles.remove(projectile)
+                    continue
                 self._resolve_hit(projectile)
                 self.projectiles.remove(projectile)
+
+    def _resolve_beam(self, projectile: Projectile) -> None:
+        """Sweep a beam through up to `beam_length` rooms in the target ship."""
+        target = projectile.target_ship
+        # Shields fully block beams (FTL canon).
+        shields = getattr(target, "shields", None)
+        if shields is not None and shields.current_layers > 0:
+            self._publish(
+                HitResolved(
+                    target=target, room_id=projectile.target_room_id,
+                    damage_dealt=0, missed=False, shield_absorbed=True,
+                )
+            )
+            return
+        # BFS through the target ship's room-adjacency graph.
+        max_rooms = max(1, projectile.beam_length)
+        visited: set[str] = set()
+        queue: list[str] = [projectile.target_room_id]
+        rooms_hit: list[str] = []
+        while queue and len(rooms_hit) < max_rooms:
+            room_id = queue.pop(0)
+            if room_id in visited:
+                continue
+            visited.add(room_id)
+            if room_id not in target.rooms:
+                continue
+            rooms_hit.append(room_id)
+            # Enqueue adjacent rooms through any door (force_closed doesn't stop beams).
+            for door in target.doors.values():
+                if door.room_a == room_id and door.room_b not in visited:
+                    queue.append(door.room_b)
+                elif door.room_b == room_id and door.room_a not in visited:
+                    queue.append(door.room_a)
+        per_room_damage = max(1, projectile.beam_room_damage or projectile.damage)
+        for rid in rooms_hit:
+            target.hull.damage(per_room_damage)
+            target.rooms[rid].take_hit(per_room_damage)
+        self._publish(
+            HitResolved(
+                target=target, room_id=projectile.target_room_id,
+                damage_dealt=per_room_damage * len(rooms_hit),
+                missed=False, shield_absorbed=False,
+            )
+        )
 
     def _resolve_hacking_drone(self, projectile: Projectile) -> None:
         payload = projectile.payload or {}
@@ -490,8 +574,16 @@ class CombatEngine:
             shield_piercing=projectile.shield_piercing,
             fire_chance=projectile.fire_chance,
             breach_chance=projectile.breach_chance,
+            ion_damage=projectile.ion_damage,
+            ion_only=(projectile.weapon_family == "ion"),
         )
         result = apply_damage(event, self.rng)
+        # Shield-absorb XP for the manning crew on shields.
+        if result.shield_absorbed:
+            from ftl.crew.xp import award_shield_xp
+
+            shields = getattr(projectile.target_ship, "shields", None)
+            award_shield_xp(shields.manning_crew if shields is not None else None)
         self._publish(
             HitResolved(
                 target=projectile.target_ship,

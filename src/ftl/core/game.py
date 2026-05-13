@@ -17,6 +17,8 @@ from ftl.core.simulation import Simulation
 from ftl.data.registry import Registry
 
 if TYPE_CHECKING:
+    from ftl.augments.augment import Augment
+    from ftl.map.star_map import StarMap
     from ftl.ships.ship import PlayerShip
 
 
@@ -31,8 +33,15 @@ class Run:
     missiles: int = DEFAULT_STARTING_MISSILES
     drone_parts: int = DEFAULT_STARTING_DRONE_PARTS
     sector_index: int = 0
+    sectors_total: int = 3
+    star_map: StarMap | None = None
+    current_beacon_id: str | None = None
+    sector_chain: list[str] = field(default_factory=list)
+    augments: list[Augment] = field(default_factory=list)
+    sectors_visited: list[str] = field(default_factory=list)
     story_flags: set[str] = field(default_factory=set)
     difficulty: str = "normal"
+    scenario_id: str | None = None
 
 
 class Game:

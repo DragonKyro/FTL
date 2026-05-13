@@ -27,6 +27,7 @@ class DamageEvent:
     breach_chance: float = 0.0
     fire_chance: float = 0.0
     shield_piercing: bool = False
+    ion_only: bool = False  # ion shots: no hull damage even when shields fall
 
 
 @dataclass
