@@ -110,6 +110,8 @@ class ShipDef(ContentDef):
     starting_augments: list[str] = Field(default_factory=list)
     starting_crew: list[str] = Field(default_factory=list)
     max_hull: int = 30
+    max_reactor_power: int = 5
+    starting_missiles: int = 0
 
 
 # --- Factions ----------------------------------------------------------------
@@ -144,6 +146,19 @@ class EventDef(ContentDef):
     triggers: list[str] = Field(default_factory=list)
 
 
+# --- Scenarios ---------------------------------------------------------------
+
+
+class ScenarioDef(ContentDef):
+    """A starting-run config: which ships fight, which AI profile drives the enemy."""
+
+    player_ship: str
+    enemy_ship: str
+    ai_profile: str = "skiff"
+    player_missiles: int | None = None
+    enemy_missiles: int | None = None
+
+
 # --- Registries --------------------------------------------------------------
 
 CONTENT_SCHEMAS: dict[str, type[ContentDef]] = {
@@ -155,6 +170,7 @@ CONTENT_SCHEMAS: dict[str, type[ContentDef]] = {
     "ships": ShipDef,
     "factions": FactionDef,
     "sectors": SectorDef,
+    "scenarios": ScenarioDef,
 }
 
 STORY_SCHEMAS: dict[str, type[ContentDef]] = {

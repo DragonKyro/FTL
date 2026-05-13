@@ -1,0 +1,8 @@
+id: consilium_of_stars
+name: Consilium of Stars
+description: The dominant pluralist federation. Bureaucratic, multi-species, eight hundred years old, fraying at the edges.
+hostile_to:
+  - iron_concordat
+  - the_unmade
+  - house_andrachen
+  - black_vein_syndicate

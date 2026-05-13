@@ -1,12 +1,17 @@
-# FTL (working title)
+# Helixfall
 
-An original, FTL-inspired roguelike spaceship sim written in Python with the
+An original FTL-inspired roguelike spaceship sim written in Python with the
 [Arcade](https://api.arcade.academy/) library. The game draws on FTL: Faster
 Than Light and its FTL Multiverse mod for genre conventions and scope ambition
 — many weapons, many species, lots of story arcs, multiple factions — but
 tells its own story with its own names, lore, and balance.
 
-This is a personal project.
+Setting: ten thousand years after a galactic civilization (the Vyrnari)
+vanished, the FTL conduit network they left behind — the **Helix Gates** —
+is failing. One ship, one captain, one collapsing galaxy.
+
+This is a personal project. The Python package is still named `ftl/` for
+historical reasons; the game's title is *Helixfall*.
 
 ## Status
 
@@ -33,7 +38,8 @@ pre-commit install
 Run the game (placeholder main menu for now):
 
 ```bash
-python -m ftl
+python helixfall.py     # convenience launcher (works without install)
+python -m ftl           # equivalent, requires `pip install -e .` or src on PYTHONPATH
 ```
 
 Run tests / lint / type-check:

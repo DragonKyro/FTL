@@ -1,0 +1,5 @@
+id: choral_order
+name: Choral Order
+description: Pacifist mystical order listening to the Echo. Catalogues Vyrnari thought-fragments. Believes the Helix can be restored.
+hostile_to:
+  - the_unmade

@@ -1,0 +1,13 @@
+id: choir
+name: Choir
+description: Silver-pupiled Sapien lineage born sensitive to the Echo. Brief precognitive glimpses.
+max_hp: 90
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.0
+combat_damage: 0.9
+traits:
+  - echo_sensitive
+  - precognition

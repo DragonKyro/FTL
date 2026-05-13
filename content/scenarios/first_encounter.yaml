@@ -1,0 +1,6 @@
+id: first_encounter
+name: First Encounter
+description: A Black Vein skiff jumps your ship in the Borderlands. Survive or flee.
+player_ship: wayfarer
+enemy_ship: vein_skiff
+ai_profile: skiff

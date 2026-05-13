@@ -1,0 +1,14 @@
+id: yssari
+name: Yssari
+description: Bioluminescent telepathic amphibians from Tholai. Detect lies and sense mind-control attempts.
+max_hp: 95
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: -0.5
+suffocation_mult: 1.0
+repair_speed: 1.0
+combat_damage: 1.0
+traits:
+  - lie_detection
+  - mind_control_warning
+  - fire_vulnerable

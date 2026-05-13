@@ -14,6 +14,7 @@ from ftl.config import (
 from ftl.core.event_bus import EventBus
 from ftl.core.rng import RNG
 from ftl.core.simulation import Simulation
+from ftl.data.registry import Registry
 
 if TYPE_CHECKING:
     from ftl.ships.ship import PlayerShip
@@ -37,11 +38,20 @@ class Run:
 class Game:
     """Top-level container for active game state."""
 
-    def __init__(self, seed: int | None = None) -> None:
+    def __init__(
+        self,
+        seed: int | None = None,
+        registry: Registry | None = None,
+    ) -> None:
         self.simulation: Simulation = Simulation()
         self.event_bus: EventBus = EventBus()
+        self.registry: Registry = registry if registry is not None else Registry()
         self.run: Run | None = None
         self._seed = seed
+
+    def load_content(self) -> None:
+        """Populate the registry from disk. Idempotent."""
+        self.registry.load_all()
 
     def new_run(self, seed: int | None = None) -> Run:
         self.simulation.reset()

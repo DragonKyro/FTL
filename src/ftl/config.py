@@ -17,7 +17,7 @@ SAVES_DIR: Path = REPO_ROOT / "saves"
 
 WINDOW_WIDTH: int = 1280
 WINDOW_HEIGHT: int = 720
-WINDOW_TITLE: str = "FTL (working title)"
+WINDOW_TITLE: str = "Helixfall"
 
 SIM_TICKS_PER_SECOND: int = 60
 SIM_DT: float = 1.0 / SIM_TICKS_PER_SECOND

@@ -1,0 +1,6 @@
+id: mercatile_verge
+name: Mercatile Verge
+description: Merchant guild controlling the Helix Gates. Charges tolls. Tolerated, resented, indispensable.
+hostile_to:
+  - black_vein_syndicate
+  - the_unmade

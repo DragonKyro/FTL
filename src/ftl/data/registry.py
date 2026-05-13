@@ -18,6 +18,7 @@ from ftl.data.schemas import (
     DroneDef,
     EventDef,
     FactionDef,
+    ScenarioDef,
     SectorDef,
     ShipDef,
     SpeciesDef,
@@ -38,6 +39,7 @@ class Registry:
         self.ships: dict[str, ShipDef] = {}
         self.factions: dict[str, FactionDef] = {}
         self.sectors: dict[str, SectorDef] = {}
+        self.scenarios: dict[str, ScenarioDef] = {}
         self.events: dict[str, EventDef] = {}
 
     def load_all(
@@ -72,5 +74,7 @@ class Registry:
             self.factions[definition.id] = definition
         elif isinstance(definition, SectorDef):
             self.sectors[definition.id] = definition
+        elif isinstance(definition, ScenarioDef):
+            self.scenarios[definition.id] = definition
         elif isinstance(definition, EventDef):
             self.events[definition.id] = definition

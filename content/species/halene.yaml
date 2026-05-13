@@ -1,0 +1,13 @@
+id: halene
+name: Halene
+description: Silver-skinned, fragile, low body heat. Generate +1 reactor power passively while alive.
+max_hp: 60
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.25
+combat_damage: 0.6
+traits:
+  - passive_reactor_plus_one
+  - fragile

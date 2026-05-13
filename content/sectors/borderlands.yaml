@@ -1,7 +1,7 @@
 id: borderlands
 name: The Borderlands
-description: Wild, lightly policed space at the edge of known systems.
-faction: free_traders
+description: Wild, lightly policed mid-Verge space. Mercatile Verge tollhouses, drifting pirates, the occasional Choral pilgrim ship.
+faction: mercatile_verge
 theme: frontier
 event_pools:
   - generic

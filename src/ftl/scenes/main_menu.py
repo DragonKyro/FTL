@@ -1,4 +1,4 @@
-"""Main menu — the one scene that actually renders something in Phase 0."""
+"""Main menu — entry point. Phase 1 launches the First Encounter scenario."""
 
 from __future__ import annotations
 
@@ -8,10 +8,15 @@ import arcade
 
 from ftl.config import WINDOW_HEIGHT, WINDOW_TITLE, WINDOW_WIDTH
 from ftl.core.scene import Scene
+from ftl.scenarios.loader import build_combat_from_scenario
+from ftl.scenes.combat_scene import CombatScene
 from ftl.ui import theme
 
 if TYPE_CHECKING:
     from ftl.core.game import Game
+
+
+_DEFAULT_SCENARIO_ID: str = "first_encounter"
 
 
 class MainMenuScene(Scene):
@@ -26,7 +31,7 @@ class MainMenuScene(Scene):
             anchor_x="center",
         )
         self._subtitle = arcade.Text(
-            "Phase 0 — Framework",
+            "Phase 1 — First Encounter",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT * 0.62,
             theme.TEXT_DIM,
@@ -34,7 +39,7 @@ class MainMenuScene(Scene):
             anchor_x="center",
         )
         self._hint = arcade.Text(
-            "[N] New Run   [Esc] Quit",
+            "[N] First Encounter   [Esc] Quit",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT * 0.30,
             theme.TEXT_ACCENT,
@@ -44,6 +49,8 @@ class MainMenuScene(Scene):
 
     def on_show_view(self) -> None:
         arcade.set_background_color(theme.BG_PRIMARY)
+        if self.game is not None:
+            self.game.simulation.paused = True
 
     def on_draw(self) -> None:
         self.clear()
@@ -53,6 +60,23 @@ class MainMenuScene(Scene):
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol == arcade.key.N and self.game is not None:
-            self.game.new_run()
+            self._start_first_encounter()
         elif symbol == arcade.key.ESCAPE and self.window is not None:
             self.window.close()
+
+    def _start_first_encounter(self) -> None:
+        if self.game is None or self.window is None:
+            return
+        run = self.game.new_run()
+        registry = self.game.registry
+        scenario = registry.scenarios[_DEFAULT_SCENARIO_ID]
+        rng = run.rng.stream("combat:0")
+        engine = build_combat_from_scenario(
+            scenario, registry, rng, event_bus=self.game.event_bus
+        )
+        player_def = registry.ships[scenario.player_ship]
+        enemy_def = registry.ships[scenario.enemy_ship]
+        scene = CombatScene(
+            self.game, engine, player_def, enemy_def, scenario_title=scenario.name
+        )
+        self.window.show_view(scene)

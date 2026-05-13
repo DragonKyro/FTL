@@ -17,9 +17,12 @@ class FTLApp(arcade.Window):
         self.game: Game = Game()
 
     def setup(self) -> None:
+        # Load all content into the registry once at startup.
+        self.game.load_content()
         self.show_view(MainMenuScene(game=self.game))
 
     def on_update(self, delta_time: float) -> None:
-        # The active scene (View) handles its own on_update; we drive the
-        # central simulation here so it ticks regardless of which scene is up.
+        # Drive the central fixed-step simulation. The active scene gets its
+        # own on_update from Arcade; this just ticks gameplay objects that
+        # registered themselves with the simulation.
         self.game.simulation.update(delta_time)

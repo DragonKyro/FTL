@@ -1,19 +1,49 @@
-# Claude Code guidance — FTL (working title)
+# Claude Code guidance — Helixfall
 
 This file orients future Claude Code sessions to the repo. Read this first
 before doing non-trivial work.
 
 ## What this project is
 
-An original, FTL-inspired roguelike. FTL: Faster Than Light and FTL Multiverse
-are **reference material for ideas and scope** (genre conventions, system
-breadth, trait archetypes, mechanic design) — they are not a content source.
+**Helixfall** — an original FTL-inspired roguelike. FTL: Faster Than Light
+and FTL Multiverse are **reference material for ideas and scope** (genre
+conventions, system breadth, trait archetypes, mechanic design) — they are
+not a content source.
+
+### The setting (one-line summary)
+
+Ten thousand years after the Vyrnari civilization vanished, their FTL
+network — the **Helix Gates** — is failing. Civilizations born from
+their uplift program (Sapien, Choir, Halene, Ferran, Mhirsa, Argonite,
+Yssari, Vor, Drevant, Karrukai, Loam, Vellisian/Lirathi, Hollow,
+Whisperborn) fight over what comes next. Something is coming through
+the failing Gates: the **Outerlight**.
+
+### Canon location
+
+Worldbuilding lives under [story/worldbuilding/](story/worldbuilding/).
+**Read these before writing events, ships, or species:**
+
+- [SETTING.md](story/worldbuilding/SETTING.md) — era and central conceit
+- [conflicts.md](story/worldbuilding/conflicts.md) — the eight conflict tiers
+- [species.md](story/worldbuilding/species.md) — the fifteen species
+- [factions/](story/worldbuilding/factions/) — fifteen faction profiles
+- [storylines.md](story/worldbuilding/storylines.md) — the twelve playable arcs
+- [glossary.md](story/worldbuilding/glossary.md) — terminology
+
+### Package naming
+
+The Python package is named `ftl/` for historical reasons (the repo
+predates the title). The game is *Helixfall*; the package stays `ftl`.
+
+### Originality rule
 
 When generating species, weapons, events, factions, or lore: **invent
 original names and flavor**. Do not paste in FTL/Multiverse identifiers
-("Kestrel", "Engi", "Zoltan", "Mantis", etc.). Use FTL trait archetypes as
-*design inspiration* for original creations — e.g. "oxygen-draining metallic
-species" is a trait pattern, not a species name.
+("Kestrel", "Engi", "Zoltan", "Mantis", "Federation", "Rebels", etc.).
+Use the canonical names listed above. Use FTL trait archetypes as
+*design inspiration* — "oxygen-draining metallic species" is a pattern,
+not a name; the canonical such species is the *Argonite*.
 
 ## Architecture
 
@@ -60,7 +90,8 @@ to combat or save to gameplay.
 
 ```bash
 pip install -e ".[dev]"       # install
-python -m ftl                 # run
+python helixfall.py           # run (convenience launcher, no install needed)
+python -m ftl                 # run (after install)
 pytest                        # tests
 ruff check . && ruff format --check .   # lint
 mypy src                      # types

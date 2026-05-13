@@ -1,7 +1,9 @@
 id: wayfarer
 name: Wayfarer
-description: A weathered scout-courier — light frame, modest reactor, three usable rooms.
-max_hull: 30
+description: A weathered scout-courier — light frame, modest reactor, four usable rooms.
+max_hull: 18
+max_reactor_power: 5
+starting_missiles: 8
 rooms:
   - id: bridge
     x: 0
@@ -11,6 +13,10 @@ rooms:
     x: 1
     y: 0
     system: weapons
+  - id: engine_room
+    x: 1
+    y: 1
+    system: engines
   - id: shield_room
     x: 2
     y: 0
@@ -19,8 +25,10 @@ starting_systems:
   - piloting
   - weapons
   - shields
+  - engines
 starting_weapons:
   - pulse_lance_mk1
+  - splinter_missile_mk1
 starting_drones: []
 starting_augments: []
 starting_crew:

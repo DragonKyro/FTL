@@ -1,0 +1,9 @@
+id: splinter_missile_mk1
+name: Splinter Missile Mk I
+description: Shield-bypassing kinetic. Cheap to fire, expensive to carry.
+family: missile
+damage: 2
+charge_time: 17.0
+shield_pierce: 5
+missile_cost: 1
+power_required: 1
