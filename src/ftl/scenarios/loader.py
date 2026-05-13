@@ -60,4 +60,6 @@ def build_combat_from_scenario(
 
     ai = EnemyPilot(enemy, player, rng)
 
-    return CombatEngine(state=state, ai=ai, rng=rng, event_bus=event_bus)
+    return CombatEngine(
+        state=state, ai=ai, rng=rng, event_bus=event_bus, registry=registry
+    )

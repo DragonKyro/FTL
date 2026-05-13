@@ -1,0 +1,6 @@
+id: boarding_drone_mk1
+name: Boarding Drone Mk I
+description: Teleport-launched chassis. Drops onto the enemy ship as a synthetic crew unit.
+family: boarding
+power_required: 3
+drone_parts_cost: 1

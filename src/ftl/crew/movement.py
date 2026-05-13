@@ -53,32 +53,50 @@ def _advance_path(crew: Crew, ship: Ship, dt: float) -> None:
         return
     move_time = _move_time_for(crew)
     crew.move_progress += dt
-    while crew.path and crew.move_progress >= move_time:
+    while crew.path:
         next_tile = crew.path[0]
-        # Re-check door passability — a door may have been closed since the path was found.
-        if crew.current_tile is not None:
+        # Door check: if the next step crosses a closed door we can't pass,
+        # spend movement time attacking the door instead.
+        blocking_door = None
+        if (
+            crew.current_tile is not None
+            and next_tile.room_id != crew.current_tile.room_id
+        ):
             cur = (crew.current_tile.x, crew.current_tile.y)
             nxt = (next_tile.x, next_tile.y)
-            if next_tile.room_id != crew.current_tile.room_id:
-                door = ship.door_between(cur, nxt)
-                if door is not None and not door.passable_for(ship.is_home_team(crew)):
-                    crew.path = []
-                    crew.move_progress = 0.0
-                    return
+            door = ship.door_between(cur, nxt)
+            if door is not None and not door.passable_for(ship.is_home_team(crew)):
+                blocking_door = door
+
+        if blocking_door is not None:
+            base_dps = 2.0
+            scaled = crew.behavior.melee_damage(
+                crew, base_dps * max(crew.move_progress, dt)
+            )
+            broke = blocking_door.take_door_hit(scaled)
+            crew.move_progress = 0.0
+            crew.state = CrewState.BREAKING_DOOR
+            if broke:
+                # Door's down — try to move on the next tick.
+                continue
+            return
+
+        if crew.move_progress < move_time:
+            break
+
         crew.current_tile = next_tile
         crew.path.pop(0)
         crew.move_progress -= move_time
-        # Recompute move_time in case species speed changes mid-walk (Phase 3+).
         move_time = _move_time_for(crew)
-        # Trigger room-enter hook if the room changed.
         room = crew.current_room()
         if room is not None:
             crew.behavior.on_room_enter(crew, room)
+
     if not crew.path:
         crew.move_progress = 0.0
-        if crew.state is CrewState.MOVING:
+        if crew.state in (CrewState.MOVING, CrewState.BREAKING_DOOR):
             crew.state = CrewState.IDLE
-    else:
+    elif crew.state is not CrewState.BREAKING_DOOR:
         crew.state = CrewState.MOVING
 
 

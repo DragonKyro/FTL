@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import arcade
 
 from ftl.combat.combat_state import Outcome
+from ftl.combat.visibility import enemy_visibility
 from ftl.config import WINDOW_HEIGHT, WINDOW_WIDTH
 from ftl.core.scene import Scene
 from ftl.crew.crew import CrewState
@@ -66,7 +67,7 @@ class CombatScene(Scene):
         self.hud = CombatHUD(engine, game.simulation, scenario_title)
 
         self._outcome_handled: bool = False
-        self._teleport_mode: bool = False
+        self._targeting_action: str | None = None  # "teleport" | "mind" | "hack" | "boarding"
 
     # --- arcade lifecycle ---------------------------------------------------
 
@@ -86,23 +87,71 @@ class CombatScene(Scene):
         selected_crew = self.crew_panel.selected_crew()
         # Show the weapon-targeted room outlined in red on the enemy ship.
         weapon_target = self._currently_targeted_enemy_room()
-        self.player_view.draw(targeted_room_id=None, selected_crew=selected_crew)
-        self.enemy_view.draw(targeted_room_id=weapon_target, selected_crew=selected_crew)
+        visibility = enemy_visibility(self.engine.player)
+        self.player_view.draw(
+            targeted_room_id=None,
+            selected_crew=selected_crew,
+            visibility=4,
+        )
+        self.enemy_view.draw(
+            targeted_room_id=weapon_target,
+            selected_crew=selected_crew,
+            visibility=visibility,
+        )
         self._draw_projectiles()
         self.hud.draw()
         self.crew_panel.draw()
         self.power_panel.draw()
         self.weapon_strip.draw()
-        if self._teleport_mode:
-            arcade.draw_text(
-                "TELEPORT MODE — click an enemy room",
-                WINDOW_WIDTH / 2,
-                WINDOW_HEIGHT - 90,
-                theme.TEXT_WARNING,
-                theme.FONT_BODY_SIZE,
-                anchor_x="center",
-            )
+        self._draw_targeting_banner()
+        self._draw_active_status()
         self._draw_controls_hint()
+
+    def _draw_targeting_banner(self) -> None:
+        if self._targeting_action is None:
+            return
+        label = {
+            "teleport": "TELEPORT — click an enemy room",
+            "mind": "MIND CONTROL — click an enemy crew member",
+            "hack": "HACKING — click an enemy system room",
+            "boarding": "BOARDING DRONE — click an enemy room",
+        }.get(self._targeting_action, "TARGETING")
+        arcade.draw_text(
+            label,
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT - 90,
+            theme.TEXT_WARNING,
+            theme.FONT_BODY_SIZE,
+            anchor_x="center",
+        )
+
+    def _draw_active_status(self) -> None:
+        """Tiny status line showing active-system cooldowns."""
+        parts: list[str] = []
+        for name, label in (
+            ("cloaking", "CLOAK"),
+            ("battery", "BATT"),
+            ("mind_control", "MIND"),
+            ("hacking", "HACK"),
+        ):
+            system = self.engine.player.systems.get(name)
+            if system is None:
+                continue
+            if getattr(system, "is_active", False):
+                rem = getattr(system, "active_remaining", 0.0)
+                parts.append(f"{label} {rem:.0f}s")
+            elif getattr(system, "cooldown_remaining", 0.0) > 0:
+                rem = getattr(system, "cooldown_remaining", 0.0)
+                parts.append(f"{label} cd{rem:.0f}s")
+        if parts:
+            arcade.draw_text(
+                "  ".join(parts),
+                WINDOW_WIDTH - 16,
+                WINDOW_HEIGHT - 64,
+                theme.TEXT_ACCENT,
+                theme.FONT_LABEL_SIZE,
+                anchor_x="right",
+            )
 
     def on_update(self, delta_time: float) -> None:
         if not self._outcome_handled and self.engine.outcome is not Outcome.FIGHTING:
@@ -131,11 +180,29 @@ class CombatScene(Scene):
         elif symbol == arcade.key.F:
             self.engine.begin_flee()
         elif symbol == arcade.key.T:
-            self._teleport_mode = not self._teleport_mode
+            self._toggle_targeting("teleport")
         elif symbol == arcade.key.R:
             self.engine.recall_boarders()
+        elif symbol == arcade.key.C:
+            self.engine.activate_cloak()
+        elif symbol == arcade.key.B:
+            self.engine.activate_battery()
+        elif symbol == arcade.key.M:
+            self._toggle_targeting("mind")
+        elif symbol == arcade.key.H:
+            self._toggle_targeting("hack")
+        elif symbol == arcade.key.D:
+            self._toggle_targeting("boarding")
+        elif symbol == arcade.key.A:
+            self.engine.try_deploy_ap_drone()
         elif symbol == arcade.key.ESCAPE:
             self._return_to_menu()
+
+    def _toggle_targeting(self, action: str) -> None:
+        if self._targeting_action == action:
+            self._targeting_action = None
+        else:
+            self._targeting_action = action
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
         # Crew panel click → select crew member.
@@ -145,15 +212,9 @@ class CombatScene(Scene):
             self.weapon_strip.selected_index = None
             return
 
-        # Teleport mode + click enemy room → send boarders.
-        if self._teleport_mode:
-            room_id = self.enemy_view.room_at(x, y)
-            if room_id is not None:
-                target_room = self.engine.enemy.rooms.get(room_id)
-                if target_room is not None:
-                    pad_crew = self._teleporter_pad_crew()
-                    self.engine.send_boarders(pad_crew, target_room)
-            self._teleport_mode = False
+        # Targeting modes — click on the enemy ship resolves the action.
+        if self._targeting_action is not None:
+            self._handle_targeting_click(x, y)
             return
 
         # Door toggle (player ship only).
@@ -210,6 +271,44 @@ class CombatScene(Scene):
                 weapon.target_room_id = room_id
                 self._power_weapon(weapon)
                 self.weapon_strip.selected_index = None
+
+    # --- targeting handler ------------------------------------------------
+
+    def _handle_targeting_click(self, x: int, y: int) -> None:
+        action = self._targeting_action
+        self._targeting_action = None  # one-shot
+        if action is None:
+            return
+        room_id = self.enemy_view.room_at(x, y)
+        target_room = self.engine.enemy.rooms.get(room_id) if room_id else None
+
+        if action == "teleport":
+            if target_room is not None:
+                pad_crew = self._teleporter_pad_crew()
+                self.engine.send_boarders(pad_crew, target_room)
+        elif action == "mind":
+            # Find an enemy crew on the clicked tile.
+            tile = self.enemy_view.tile_at(x, y)
+            if tile is not None:
+                target_crew = next(
+                    (
+                        c for c in self.engine.enemy.crew
+                        if c.alive
+                        and c.current_tile is not None
+                        and c.current_tile.x == tile.x
+                        and c.current_tile.y == tile.y
+                        and c.team == "enemy"
+                    ),
+                    None,
+                )
+                if target_crew is not None:
+                    self.engine.try_mind_control(target_crew)
+        elif action == "hack":
+            if target_room is not None and target_room.system is not None:
+                self.engine.try_hack(target_room.system, self.engine.enemy)
+        elif action == "boarding":
+            if target_room is not None:
+                self.engine.try_deploy_boarding_drone(target_room)
 
     # --- helpers ------------------------------------------------------------
 
@@ -304,8 +403,10 @@ class CombatScene(Scene):
 
     def _draw_controls_hint(self) -> None:
         hint = (
-            "[1-7] power systems  [click crew/tile] move  [click door] toggle  "
-            "[T] teleport  [R] recall  [Space] pause  [F] flee  [Esc] menu"
+            "[1-7] power  [click crew/tile] move  [click door] toggle  "
+            "[T] teleport  [R] recall  [C] cloak  [B] battery  "
+            "[M] mind  [H] hack  [D] boarding drone  [A] AP drone  "
+            "[Space] pause  [F] flee  [Esc] menu"
         )
         arcade.draw_text(
             hint,

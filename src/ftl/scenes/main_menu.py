@@ -1,4 +1,9 @@
-"""Main menu — entry point. Phase 1 launches the First Encounter scenario."""
+"""Main menu — entry point.
+
+Phase 3 exposes two starting scenarios via hotkey:
+- [N] First Encounter (Wayfarer vs Vein Skiff, medbay path)
+- [P] Pilgrim Path (Pilgrim — Wayfarer with clonebay — vs Vein Skiff)
+"""
 
 from __future__ import annotations
 
@@ -16,7 +21,8 @@ if TYPE_CHECKING:
     from ftl.core.game import Game
 
 
-_DEFAULT_SCENARIO_ID: str = "first_encounter"
+_FIRST_ENCOUNTER_ID: str = "first_encounter"
+_PILGRIM_PATH_ID: str = "pilgrim_path"
 
 
 class MainMenuScene(Scene):
@@ -31,7 +37,7 @@ class MainMenuScene(Scene):
             anchor_x="center",
         )
         self._subtitle = arcade.Text(
-            "Phase 1 — First Encounter",
+            "Phase 3 — Every room lives",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT * 0.62,
             theme.TEXT_DIM,
@@ -39,7 +45,7 @@ class MainMenuScene(Scene):
             anchor_x="center",
         )
         self._hint = arcade.Text(
-            "[N] First Encounter   [Esc] Quit",
+            "[N] First Encounter   [P] Pilgrim Path   [Esc] Quit",
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT * 0.30,
             theme.TEXT_ACCENT,
@@ -60,16 +66,18 @@ class MainMenuScene(Scene):
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         if symbol == arcade.key.N and self.game is not None:
-            self._start_first_encounter()
+            self._start_scenario(_FIRST_ENCOUNTER_ID)
+        elif symbol == arcade.key.P and self.game is not None:
+            self._start_scenario(_PILGRIM_PATH_ID)
         elif symbol == arcade.key.ESCAPE and self.window is not None:
             self.window.close()
 
-    def _start_first_encounter(self) -> None:
+    def _start_scenario(self, scenario_id: str) -> None:
         if self.game is None or self.window is None:
             return
         run = self.game.new_run()
         registry = self.game.registry
-        scenario = registry.scenarios[_DEFAULT_SCENARIO_ID]
+        scenario = registry.scenarios[scenario_id]
         rng = run.rng.stream("combat:0")
         engine = build_combat_from_scenario(
             scenario, registry, rng, event_bus=self.game.event_bus

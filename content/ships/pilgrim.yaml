@@ -1,15 +1,15 @@
-id: wayfarer
-name: Wayfarer
-description: A weathered scout-courier. Every Phase-3 system has its own room.
-max_hull: 18
+id: pilgrim
+name: Pilgrim
+description: A Choral Order configuration of the Wayfarer hull. Clonebay in place of medbay; a Choir aboard.
+max_hull: 19
 max_reactor_power: 10
-starting_missiles: 8
+starting_missiles: 6
 rooms:
   - { id: bridge,         x: 0, y: 0, system: piloting }
   - { id: gun_bay,        x: 1, y: 0, system: weapons }
   - { id: shield_room,    x: 2, y: 0, system: shields }
   - { id: sensor_array,   x: 3, y: 0, system: sensors }
-  - { id: medbay,         x: 0, y: 1, system: medbay }
+  - { id: clonebay,       x: 0, y: 1, system: clonebay }
   - { id: engine_room,    x: 1, y: 1, system: engines }
   - { id: oxygen_room,    x: 2, y: 1, system: oxygen }
   - { id: doors_room,     x: 3, y: 1, system: doors }
@@ -24,7 +24,7 @@ starting_systems:
   - weapons
   - shields
   - engines
-  - medbay
+  - clonebay
   - oxygen
   - teleporter
   - sensors
@@ -42,5 +42,5 @@ starting_drones:
 starting_augments: []
 starting_crew:
   - sapien
-  - halene
+  - choir
   - mhirsa

@@ -1,0 +1,6 @@
+id: defense_drone_mk1
+name: Defense Drone Mk I
+description: Orbits the host ship, shoots down incoming missiles.
+family: defense
+power_required: 2
+drone_parts_cost: 1

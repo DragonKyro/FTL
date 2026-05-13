@@ -122,13 +122,15 @@ class ShipView:
         self,
         targeted_room_id: str | None = None,
         selected_crew: Crew | None = None,
+        visibility: int = 4,
     ) -> None:
         self._title_text.draw()
         self._draw_hull_bar()
-        self._draw_tiles(targeted_room_id)
+        self._draw_tiles(targeted_room_id, visibility)
         self._draw_doors()
         self._draw_shield_ring()
-        self._draw_crew(selected_crew)
+        if visibility >= 3:
+            self._draw_crew(selected_crew)
 
     def _draw_hull_bar(self) -> None:
         bar_w = (self._max_x + 1) * TILE_PX
@@ -153,19 +155,25 @@ class ShipView:
             theme.FONT_LABEL_SIZE,
         )
 
-    def _draw_tiles(self, targeted_room_id: str | None) -> None:
+    def _draw_tiles(self, targeted_room_id: str | None, visibility: int) -> None:
+        show_oxygen_tint = visibility >= 2
+        show_fire_breach = visibility >= 2
+        show_labels = visibility >= 2
         seen_rooms: set[str] = set()
         for tile in self.ship.tile_graph.values():
             room = self.ship.rooms.get(tile.room_id)
             if room is None:
                 continue
             left, bottom = self.tile_to_screen(tile)
-            fill = self._tile_fill_color(room)
+            if show_oxygen_tint:
+                fill = self._tile_fill_color(room)
+            else:
+                fill = (32, 36, 44)  # foggy unknown
             arcade.draw_lbwh_rectangle_filled(left, bottom, TILE_PX, TILE_PX, fill)
             arcade.draw_lbwh_rectangle_outline(
                 left, bottom, TILE_PX, TILE_PX, (30, 35, 45)
             )
-            if room.fire > 0:
+            if show_fire_breach and room.fire > 0:
                 intensity = min(1.0, room.fire / 100.0)
                 tint: tuple[int, int, int] = (255, int(140 - 60 * intensity), 40)
                 arcade.draw_circle_filled(
@@ -174,7 +182,7 @@ class ShipView:
                     6 + 6 * intensity,
                     tint,
                 )
-            if room.breach > 0:
+            if show_fire_breach and room.breach > 0:
                 arcade.draw_line(
                     left + 4, bottom + 4,
                     left + TILE_PX - 4, bottom + TILE_PX - 4,
@@ -187,7 +195,8 @@ class ShipView:
                 )
             if room.id not in seen_rooms:
                 seen_rooms.add(room.id)
-                self._draw_room_label(room)
+                if show_labels:
+                    self._draw_room_label(room)
                 if room.id == targeted_room_id:
                     self._draw_room_outline(room, theme.COLOR_ROOM_TARGETED, 2)
 

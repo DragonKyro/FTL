@@ -1,0 +1,12 @@
+id: synthetic
+name: Synthetic Drone
+description: A combat chassis with sub-sentient routines. Walks, fights, doesn't bleed.
+max_hp: 150
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: 0.5
+suffocation_mult: 0.0
+repair_speed: 0.0
+combat_damage: 1.0
+traits:
+  - synthetic

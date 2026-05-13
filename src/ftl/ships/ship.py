@@ -25,15 +25,24 @@ from ftl.crew.species_behaviors import behavior_for
 from ftl.ships.hull import Hull
 from ftl.ships.layout import build_layout
 from ftl.ships.room import Room
+from ftl.systems.artillery import ArtillerySystem
+from ftl.systems.battery import BatterySystem
 from ftl.systems.cloaking import CloakingSystem
+from ftl.systems.clonebay import ClonebaySystem
+from ftl.systems.doors import DoorsSystem
+from ftl.systems.drone_control import DroneControlSystem
 from ftl.systems.engines import EnginesSystem
+from ftl.systems.hacking import HackingSystem
 from ftl.systems.medbay import MedbaySystem
+from ftl.systems.mind_control import MindControlSystem
 from ftl.systems.oxygen import OxygenSystem
 from ftl.systems.piloting import PilotingSystem
+from ftl.systems.sensors import SensorsSystem
 from ftl.systems.shields import ShieldsSystem
 from ftl.systems.system import System
 from ftl.systems.teleporter import TeleporterSystem
 from ftl.systems.weapons import WeaponsSystem
+from ftl.drones.drone import Drone, DroneStats
 from ftl.weapons.laser import LaserWeapon
 from ftl.weapons.missile import MissileWeapon
 from ftl.weapons.weapon import Weapon, WeaponStats
@@ -66,6 +75,14 @@ _SYSTEM_FACTORIES: dict[str, type[System]] = {
     "medbay": MedbaySystem,
     "oxygen": OxygenSystem,
     "teleporter": TeleporterSystem,
+    "sensors": SensorsSystem,
+    "doors": DoorsSystem,
+    "drone_control": DroneControlSystem,
+    "hacking": HackingSystem,
+    "mind_control": MindControlSystem,
+    "battery": BatterySystem,
+    "clonebay": ClonebaySystem,
+    "artillery": ArtillerySystem,
 }
 
 # Weapon family -> concrete Weapon class.
@@ -97,6 +114,9 @@ class Ship:
         self.crew: list[Crew] = []
         self.weapons: list[Weapon] = []
         self.drones: list[Drone] = []
+        # Set per-tick by CombatEngine: when True, opponent is cloaked
+        # and our weapons can't charge.
+        self.cloak_freeze: bool = False
 
     # --- construction --------------------------------------------------------
 
@@ -115,7 +135,19 @@ class Ship:
 
     @property
     def max_reactor_power(self) -> int:
-        return self.base_max_reactor_power + self.crew_power_bonus
+        return self.base_max_reactor_power + self.crew_power_bonus + self.battery_bonus
+
+    @property
+    def battery_bonus(self) -> int:
+        battery = self.systems.get("battery")
+        if isinstance(battery, BatterySystem):
+            return battery.power_bonus
+        return 0
+
+    @property
+    def is_cloaked(self) -> bool:
+        cloak = self.systems.get("cloaking")
+        return isinstance(cloak, CloakingSystem) and cloak.is_active
 
     @property
     def shields(self) -> ShieldsSystem | None:
@@ -179,7 +211,11 @@ class Ship:
         piloting = self.systems.get("piloting")
         if piloting is not None and piloting.manning_crew is not None:
             base += 0.05
-        return min(0.6, base)
+        cap = 0.6
+        if self.is_cloaked:
+            base += 0.6
+            cap = 0.95
+        return min(cap, base)
 
     # --- ticking -------------------------------------------------------------
 
@@ -207,11 +243,11 @@ class Ship:
         weapons_charge_mult = self._weapons_charge_multiplier()
         for weapon in self.weapons:
             weapon.tick(dt * weapons_charge_mult)
-        # 7. Drones (Phase 3+ work).
-        for drone in self.drones:
-            drone.tick(dt)
+        # 7. Drones — ticked from CombatEngine (need opponent reference).
 
     def _weapons_charge_multiplier(self) -> float:
+        if self.cloak_freeze:
+            return 0.0
         ws = self.weapons_system
         if ws is None or ws.manning_crew is None:
             return 1.0
@@ -256,6 +292,31 @@ class Ship:
             if host_room is None:
                 continue
             ship.install_system(factory(), host_room.id)
+
+        # Drones.
+        for drone_id in ship_def.starting_drones:
+            drone_def = registry.drones.get(drone_id)
+            if drone_def is None:
+                continue
+            drone_stats = DroneStats(
+                id=drone_def.id,
+                name=drone_def.name,
+                family=drone_def.family,
+                power_required=drone_def.power_required,
+                speed=drone_def.speed,
+                damage=drone_def.damage,
+                drone_parts_cost=drone_def.drone_parts_cost,
+            )
+            ship.drones.append(Drone(drone_stats))
+
+        # Doors: if the ship has a doors system, raise every door's max_hp
+        # accordingly.
+        doors_system = ship.systems.get("doors")
+        if doors_system is not None:
+            base_hp = 4 + 4 * (doors_system.level - 1)
+            for door in ship.doors.values():
+                door.max_hp = base_hp
+                door.hp = base_hp
 
         # Weapons.
         for weapon_id in ship_def.starting_weapons:

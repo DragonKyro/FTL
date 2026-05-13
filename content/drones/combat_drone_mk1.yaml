@@ -1,0 +1,7 @@
+id: combat_drone_mk1
+name: Combat Drone Mk I
+description: Orbital drone that fires light pulses at random enemy rooms.
+family: combat
+power_required: 2
+damage: 1
+drone_parts_cost: 1

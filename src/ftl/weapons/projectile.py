@@ -22,11 +22,14 @@ class Projectile:
     target_room_id: str
     damage: int
     shield_piercing: bool
-    weapon_family: str  # "laser" | "missile" | "beam" | ...
+    weapon_family: str  # "laser" | "missile" | "beam" | "hacking_drone" | ...
     fire_chance: float = 0.0
     breach_chance: float = 0.0
     travel_time: float = 1.0
     elapsed: float = 0.0
+    # Optional payload — used by hacking drones to identify which system
+    # to latch on arrival. Stored loosely-typed to avoid a circular import.
+    payload: dict | None = None
 
     @property
     def arrived(self) -> bool:

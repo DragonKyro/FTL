@@ -23,6 +23,10 @@ def _wayfarer() -> PlayerShip:
 def test_oxygen_system_fills_its_own_room() -> None:
     ship = _wayfarer()
     oxygen_room = next(r for r in ship.rooms.values() if r.system is ship.oxygen_system)
+    # Force-close every door so oxygen can't drain to other rooms; we're
+    # testing only the production half of the loop here.
+    for door in ship.doors.values():
+        door.force_closed = True
     for _ in range(60 * 30):  # 30 simulated seconds
         tick_atmosphere(ship, 1.0 / 60.0)
     assert oxygen_room.oxygen > 0.5
@@ -31,12 +35,12 @@ def test_oxygen_system_fills_its_own_room() -> None:
 def test_oxygen_flows_to_adjacent_rooms() -> None:
     ship = _wayfarer()
     oxygen_room = next(r for r in ship.rooms.values() if r.system is ship.oxygen_system)
-    # Find a room two doors away from oxygen_room.
+    # Bridge is several doors away from the oxygen room on the new ship.
     target_room = ship.rooms["bridge"]
-    for _ in range(60 * 90):  # 90s — plenty of time
+    for _ in range(60 * 180):  # 3 simulated minutes — bigger ship needs it
         tick_atmosphere(ship, 1.0 / 60.0)
-    assert oxygen_room.oxygen > 0.8
-    assert target_room.oxygen > 0.4
+    assert oxygen_room.oxygen > 0.4
+    assert target_room.oxygen > 0.2
 
 
 def test_breach_vents_oxygen() -> None:

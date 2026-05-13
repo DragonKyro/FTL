@@ -46,7 +46,9 @@ class WeaponDef(ContentDef):
 
 # --- Drones ------------------------------------------------------------------
 
-DroneFamily = Literal["combat", "defense", "boarding", "repair", "hacking"]
+DroneFamily = Literal[
+    "combat", "defense", "boarding", "repair", "hacking", "anti_personnel"
+]
 
 
 class DroneDef(ContentDef):

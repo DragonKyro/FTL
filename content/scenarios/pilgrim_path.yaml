@@ -1,0 +1,6 @@
+id: pilgrim_path
+name: Pilgrim Path
+description: A Choral Order pilgrim ship transports a relic past Black Vein patrols.
+player_ship: pilgrim
+enemy_ship: vein_skiff
+ai_profile: skiff

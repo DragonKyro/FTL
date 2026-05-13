@@ -1,8 +1,9 @@
 """Base class for ship systems.
 
-A System wraps power, level (cap on power), damage (bars taken), ion charge
-(temporary disable), and an optional manning crew member. Subclasses model
-specific systems (weapons, shields, engines, ...).
+A System wraps power, level (cap on power), damage (bars taken), ion
+charge (temporary disable), an optional manning crew member, and a
+"hacked" flag set by an enemy HackingSystem while it's active. Subclasses
+model specific systems (weapons, shields, engines, ...).
 """
 
 from __future__ import annotations
@@ -24,15 +25,18 @@ class System:
         self.current_power: int = 0
         self.damage: int = 0
         self.ion_charge: float = 0.0
+        self.hacked: bool = False
         self.manning_crew: Crew | None = None
 
     @property
     def effective_power(self) -> int:
+        if self.hacked:
+            return 0
         return max(0, self.current_power - self.damage)
 
     @property
     def is_operational(self) -> bool:
-        return self.effective_power > 0 and self.ion_charge <= 0
+        return self.effective_power > 0 and self.ion_charge <= 0 and not self.hacked
 
     def set_power(self, value: int) -> None:
         self.current_power = max(0, min(value, self.max_power, self.level))

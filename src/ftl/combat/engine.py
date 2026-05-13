@@ -28,15 +28,20 @@ from ftl.combat.combat_state import CombatState, Inventory, Outcome
 from ftl.combat.damage import DamageEvent
 from ftl.combat.pipeline import apply_damage
 from ftl.crew.combat import tick_crew_combat
-from ftl.crew.crew import CrewState
+from ftl.crew.crew import Crew, CrewState
+from ftl.crew.species import Species
+from ftl.crew.species_behaviors import behavior_for
+from ftl.drones.intercept import try_intercept
+from ftl.drones.runtime import tick_drones
 from ftl.weapons.projectile import Projectile
 
 if TYPE_CHECKING:
     from ftl.ai.enemy_pilot import EnemyPilot
     from ftl.core.event_bus import EventBus
-    from ftl.crew.crew import Crew
+    from ftl.data.registry import Registry
     from ftl.ships.room import Room
     from ftl.ships.ship import Ship
+    from ftl.systems.system import System
     from ftl.weapons.weapon import Weapon
 
 
@@ -86,11 +91,13 @@ class CombatEngine:
         ai: EnemyPilot,
         rng: Random,
         event_bus: EventBus | None = None,
+        registry: Registry | None = None,
     ) -> None:
         self.state: CombatState = state
         self.ai: EnemyPilot = ai
         self.rng: Random = rng
         self.event_bus: EventBus | None = event_bus
+        self.registry: Registry | None = registry
         self.projectiles: list[Projectile] = []
 
     # --- exposed for tests / UI -------------------------------------------
@@ -178,6 +185,131 @@ class CombatEngine:
     def has_boarders_on_enemy(self) -> bool:
         return any(c.home_ship is self.state.player for c in self.state.enemy.crew)
 
+    # --- Phase 3 active-system commands ---------------------------------
+
+    def activate_cloak(self) -> bool:
+        cloak = self.state.player.systems.get("cloaking")
+        if cloak is None or not hasattr(cloak, "activate"):
+            return False
+        return bool(cloak.activate())
+
+    def activate_battery(self) -> bool:
+        battery = self.state.player.systems.get("battery")
+        if battery is None or not hasattr(battery, "activate"):
+            return False
+        return bool(battery.activate())
+
+    def try_mind_control(self, target_crew: Crew) -> bool:
+        mc = self.state.player.systems.get("mind_control")
+        if mc is None or not hasattr(mc, "begin"):
+            return False
+        if target_crew.current_ship is not self.state.enemy:
+            return False
+        if not target_crew.alive:
+            return False
+        return bool(mc.begin(target_crew))
+
+    def try_hack(self, target_system: System, on_ship: Ship) -> bool:
+        """Single-button hack: if no drone in flight + nothing latched,
+        launches the drone. If latched, activates the effect."""
+        hack = self.state.player.systems.get("hacking")
+        if hack is None:
+            return False
+        if hack.can_activate:
+            return bool(hack.activate())
+        if not hack.can_launch:
+            return False
+        # Find the room hosting the target system on the target ship.
+        target_room = next(
+            (r for r in on_ship.rooms.values() if r.system is target_system),
+            None,
+        )
+        if target_room is None:
+            return False
+        hack.begin_launch()
+        projectile = Projectile(
+            source_ship=self.state.player,
+            target_ship=on_ship,
+            target_room_id=target_room.id,
+            damage=0,
+            shield_piercing=True,
+            weapon_family="hacking_drone",
+            travel_time=2.0,
+            payload={
+                "hacking_system": hack,
+                "target_system": target_system,
+                "on_ship": on_ship,
+            },
+        )
+        self.projectiles.append(projectile)
+        return True
+
+    def try_deploy_boarding_drone(self, target_room: Room) -> bool:
+        return self._deploy_synthetic_drone(
+            family="boarding",
+            on_ship=self.state.enemy,
+            target_room=target_room,
+        )
+
+    def try_deploy_ap_drone(self) -> bool:
+        # AP drones spawn on the teleporter pad — easy to find an empty tile.
+        pad_room = self._teleporter_pad_room(self.state.player)
+        target_room = pad_room or next(iter(self.state.player.rooms.values()))
+        return self._deploy_synthetic_drone(
+            family="anti_personnel",
+            on_ship=self.state.player,
+            target_room=target_room,
+        )
+
+    def _deploy_synthetic_drone(
+        self, family: str, on_ship: Ship, target_room: Room
+    ) -> bool:
+        # Find an installed drone of this family on the player ship.
+        drone = next(
+            (d for d in self.state.player.drones if d.alive and d.stats.family == family),
+            None,
+        )
+        if drone is None:
+            return False
+        # Check drone control system + inventory.
+        dc = self.state.player.systems.get("drone_control")
+        if dc is None or not dc.is_operational:
+            return False
+        if self.state.player_inventory.drone_parts < drone.stats.drone_parts_cost:
+            return False
+        if not target_room.tiles:
+            return False
+        synthetic = self.registry.species.get("synthetic") if self.registry else None
+        if synthetic is None:
+            return False
+        species = Species(
+            id=synthetic.id,
+            name=synthetic.name,
+            max_hp=synthetic.max_hp,
+            move_speed=synthetic.move_speed,
+            damage_mult=synthetic.damage_mult,
+            fire_resistance=synthetic.fire_resistance,
+            suffocation_mult=synthetic.suffocation_mult,
+            repair_speed=synthetic.repair_speed,
+            combat_damage=synthetic.combat_damage,
+            traits=list(synthetic.traits),
+        )
+        team = "player" if on_ship is self.state.player else "player"  # always player team
+        new_crew = Crew(
+            name=f"{drone.stats.name} Unit",
+            species=species,
+            team=team,
+            behavior=behavior_for("synthetic"),
+        )
+        new_crew.home_ship = self.state.player
+        new_crew.current_ship = on_ship
+        new_crew.current_tile = target_room.tiles[0]
+        on_ship.crew.append(new_crew)
+        # Consume drone + parts; drone leaves the installed list (one-shot).
+        self.state.player.drones.remove(drone)
+        self.state.player_inventory.drone_parts -= drone.stats.drone_parts_cost
+        return True
+
     def _teleporter_pad_room(self, ship: Ship) -> Room | None:
         tele = ship.teleporter
         if tele is None:
@@ -194,8 +326,17 @@ class CombatEngine:
             return
 
         self.ai.tick(dt)
+
+        # Cloak gating: opponent's weapons freeze while we're cloaked.
+        self.state.player.cloak_freeze = self.state.enemy.is_cloaked
+        self.state.enemy.cloak_freeze = self.state.player.is_cloaked
+
         self.state.player.tick(dt)
         self.state.enemy.tick(dt)
+
+        # Drones tick after ships so they see the latest power state.
+        tick_drones(self.state.player, self.state.enemy, self, dt)
+        tick_drones(self.state.enemy, self.state.player, self, dt)
 
         # Crew combat resolves *after* ship ticks (which moved everyone).
         tick_crew_combat(self.state.player, dt)
@@ -268,10 +409,14 @@ class CombatEngine:
                 for system in ship.systems.values():
                     if system.manning_crew is crew:
                         system.manning_crew = None
-                # Drop them from this ship; the home_ship retains the
-                # reference for "they died on the away mission" if we
-                # ever want a postmortem panel.
+                # Drop them from this ship.
                 ship.crew.remove(crew)
+                # If the home ship has a clonebay, queue them for revive.
+                home = crew.home_ship
+                if home is not None:
+                    clonebay = home.systems.get("clonebay")
+                    if clonebay is not None and hasattr(clonebay, "enqueue"):
+                        clonebay.enqueue(crew)
 
     # --- internals -------------------------------------------------------
 
@@ -316,8 +461,26 @@ class CombatEngine:
         for projectile in list(self.projectiles):
             projectile.tick(dt)
             if projectile.arrived:
+                # Hacking drones land separately — no damage pipeline, just latch.
+                if projectile.weapon_family == "hacking_drone":
+                    self._resolve_hacking_drone(projectile)
+                    self.projectiles.remove(projectile)
+                    continue
+                # Defense drone interception (missiles only).
+                if try_intercept(projectile, projectile.target_ship, self.rng):
+                    self.projectiles.remove(projectile)
+                    continue
                 self._resolve_hit(projectile)
                 self.projectiles.remove(projectile)
+
+    def _resolve_hacking_drone(self, projectile: Projectile) -> None:
+        payload = projectile.payload or {}
+        hack = payload.get("hacking_system")
+        target_system = payload.get("target_system")
+        on_ship = payload.get("on_ship")
+        if hack is None or target_system is None or on_ship is None:
+            return
+        hack.on_drone_arrival(target_system, on_ship)
 
     def _resolve_hit(self, projectile: Projectile) -> None:
         event = DamageEvent(

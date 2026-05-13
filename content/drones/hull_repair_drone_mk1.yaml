@@ -1,0 +1,6 @@
+id: hull_repair_drone_mk1
+name: Hull Repair Drone Mk I
+description: Welds the hull from outside while powered.
+family: repair
+power_required: 2
+drone_parts_cost: 1

@@ -40,6 +40,8 @@ class CrewState(str, Enum):
     HEALING = "healing"
     FIGHTING_FIRE = "fighting_fire"
     FIGHTING = "fighting"
+    BREAKING_DOOR = "breaking_door"
+    MIND_CONTROLLED = "mind_controlled"
     DEAD = "dead"
 
 
@@ -66,6 +68,7 @@ class Crew:
         self.path: list[Tile] = []
         self.move_progress: float = 0.0
         self.repair_accum: float = 0.0
+        self.clone_progress: float = 0.0
         self.skills: dict[Skill, int] = {s: 0 for s in Skill}
 
     @property
