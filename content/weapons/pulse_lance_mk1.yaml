@@ -1,0 +1,8 @@
+id: pulse_lance_mk1
+name: Pulse Lance Mk I
+description: Cheap, dependable energy weapon firing one bolt per charge.
+family: laser
+damage: 1
+charge_time: 10.0
+shield_pierce: 0
+power_required: 1

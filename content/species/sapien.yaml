@@ -1,0 +1,11 @@
+id: sapien
+name: Sapien
+description: Baseline humanoid spacefarers. No standout strengths, no weaknesses.
+max_hp: 100
+move_speed: 1.0
+damage_mult: 1.0
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.0
+combat_damage: 1.0
+traits: []

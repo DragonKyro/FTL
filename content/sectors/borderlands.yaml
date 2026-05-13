@@ -1,0 +1,9 @@
+id: borderlands
+name: The Borderlands
+description: Wild, lightly policed space at the edge of known systems.
+faction: free_traders
+theme: frontier
+event_pools:
+  - generic
+min_beacons: 15
+max_beacons: 22

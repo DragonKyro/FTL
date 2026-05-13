@@ -1,0 +1,7 @@
+id: weapons
+name: Weapons Array
+description: Routes reactor power into individual mounted weapons.
+base_power_cost: 1
+max_level: 8
+max_power: 8
+install_cost: 0

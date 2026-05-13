@@ -1,0 +1,10 @@
+id: quiet_drift
+name: Quiet Drift
+description: A placeholder demo event so the loader has something to chew on.
+text: |
+  Your sensors find nothing of note at this beacon. The reactor hums; somewhere
+  in the ship a crew member is humming along.
+choices:
+  - text: Continue.
+    outcome_id: nothing
+triggers: []
