@@ -1,0 +1,13 @@
+id: mhirsa
+name: Mhirsa
+description: Engineered ape-descended warriors, freed in the Slave Wars. Hit harder, move faster, live shorter.
+max_hp: 70
+move_speed: 1.2
+damage_mult: 1.5
+fire_resistance: 0.0
+suffocation_mult: 1.0
+repair_speed: 1.0
+combat_damage: 1.5
+traits:
+  - melee_bonus
+  - fast_movement

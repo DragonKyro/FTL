@@ -3,14 +3,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ftl.crew.crew import Crew
 
 
 @dataclass
 class Tile:
+    """A tile on the ship grid.
+
+    `(x, y)` is the *global* ship-grid coordinate, not room-local. Two
+    tiles in the same ship share a coordinate space; tiles in two
+    different ships are independent universes (each ship has its own
+    grid origin at (0, 0)).
+    """
+
     x: int
     y: int
-    occupant: Crew | None = None
+    room_id: str = ""
+    walkable: bool = True
+
+    def coord(self) -> tuple[int, int]:
+        return self.x, self.y

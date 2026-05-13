@@ -24,8 +24,8 @@ class DamageEvent:
     ion_damage: int = 0
     crew_damage: int = 0
     system_damage: int = 0
-    breach: bool = False
-    fire: bool = False
+    breach_chance: float = 0.0
+    fire_chance: float = 0.0
     shield_piercing: bool = False
 
 
@@ -37,3 +37,5 @@ class DamageResult:
     shield_absorbed: bool = False
     hull_damage: int = 0
     system_damage: int = 0
+    started_fire: bool = False
+    started_breach: bool = False

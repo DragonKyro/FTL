@@ -1,33 +1,24 @@
-"""Room behavior: oxygen depletion when breached."""
+"""Room is now a passive data container. The active atmosphere + hazards
+simulation lives in `ships.atmosphere` and `ships.hazards`; their tests
+exercise the oxygen/fire/breach behavior end-to-end.
+"""
 
 from __future__ import annotations
 
 from ftl.ships.room import Room
 
 
-def test_breached_room_loses_oxygen_over_time():
-    room = Room(id="cargo", breach=1, oxygen=1.0)
+def test_room_take_hit_propagates_to_system():
+    from ftl.systems.weapons import WeaponsSystem
 
-    # 1 second of ticking, in 60 Hz fixed-step chunks
-    for _ in range(60):
-        room.tick(1.0 / 60.0)
-
-    assert room.oxygen < 1.0
-
-
-def test_unbreached_room_keeps_oxygen():
-    room = Room(id="bridge", breach=0, oxygen=1.0)
-
-    for _ in range(60):
-        room.tick(1.0 / 60.0)
-
-    assert room.oxygen == 1.0
+    system = WeaponsSystem()
+    room = Room(id="gun_bay", system=system)
+    room.take_hit(2)
+    assert system.damage == 2
 
 
-def test_oxygen_clamped_at_zero():
-    room = Room(id="cargo", breach=5, oxygen=0.01)
-
-    for _ in range(600):  # plenty of time
-        room.tick(1.0 / 60.0)
-
-    assert room.oxygen >= 0.0
+def test_room_take_hit_with_no_system_is_noop():
+    room = Room(id="empty")
+    room.take_hit(2)
+    assert room.fire == 0
+    assert room.breach == 0

@@ -1,28 +1,25 @@
 id: vein_skiff
 name: Black Vein Skiff
-description: A patched-together pirate runner. Light hull, single laser, no engines.
+description: A patched-together pirate runner. Light hull, one laser, two crew, no engines.
 max_hull: 12
-max_reactor_power: 4
+max_reactor_power: 5
 starting_missiles: 0
 rooms:
-  - id: bridge
-    x: 0
-    y: 0
-    system: piloting
-  - id: gun_bay
-    x: 1
-    y: 0
-    system: weapons
-  - id: shield_room
-    x: 2
-    y: 0
-    system: shields
+  - { id: bridge,      x: 0, y: 0, system: piloting }
+  - { id: gun_bay,     x: 1, y: 0, system: weapons }
+  - { id: shield_room, x: 2, y: 0, system: shields }
+  - { id: medbay,      x: 1, y: 1, system: medbay }
+  - { id: oxygen_room, x: 2, y: 1, system: oxygen }
 starting_systems:
   - piloting
   - weapons
   - shields
+  - medbay
+  - oxygen
 starting_weapons:
   - pulse_lance_mk1
 starting_drones: []
 starting_augments: []
-starting_crew: []
+starting_crew:
+  - sapien
+  - sapien

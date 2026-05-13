@@ -1,14 +1,17 @@
 """Ship base class + Player/Enemy subclasses.
 
-A Ship owns a hull, a layout (rooms + doors), installed systems, crew, and
-loadout (weapons + drones). It's a Tickable: ticking a ship ticks all its
-constituents.
+A Ship owns a hull, a layout (rooms + tile grid + doors), installed
+systems, crew, and loadout (weapons + drones). It's a Tickable: ticking
+a ship ticks all its constituents.
 
-Phase 1 adds:
-- `max_reactor_power` field
-- `from_def(...)` factory that wires up a Ship from a ShipDef + Registry
-- `evasion_chance()` derived from engines
-- `shields` / `engines` / `weapons_system` typed accessors
+Phase 2 adds:
+- `tile_graph: dict[(x,y), Tile]` populated from `build_layout`
+- `doors: list[Door]` inferred between adjacent rooms
+- `crew_aboard` aliased to `crew` — boarders end up here when teleporters
+  flip ownership
+- Reactor power is no longer a fixed int: `max_reactor_power` is a
+  property that adds `crew_power_bonus` (Halene contributions) on top
+  of `base_max_reactor_power`.
 """
 
 from __future__ import annotations
@@ -16,36 +19,56 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ftl.config import DEFAULT_HULL_HP
+from ftl.crew.crew import Crew
+from ftl.crew.species import Species
+from ftl.crew.species_behaviors import behavior_for
 from ftl.ships.hull import Hull
+from ftl.ships.layout import build_layout
 from ftl.ships.room import Room
 from ftl.systems.cloaking import CloakingSystem
 from ftl.systems.engines import EnginesSystem
+from ftl.systems.medbay import MedbaySystem
+from ftl.systems.oxygen import OxygenSystem
 from ftl.systems.piloting import PilotingSystem
 from ftl.systems.shields import ShieldsSystem
 from ftl.systems.system import System
+from ftl.systems.teleporter import TeleporterSystem
 from ftl.systems.weapons import WeaponsSystem
 from ftl.weapons.laser import LaserWeapon
 from ftl.weapons.missile import MissileWeapon
 from ftl.weapons.weapon import Weapon, WeaponStats
 
 if TYPE_CHECKING:
-    from ftl.crew.crew import Crew
     from ftl.data.registry import Registry
     from ftl.data.schemas import ShipDef
     from ftl.drones.drone import Drone
     from ftl.ships.door import Door
+    from ftl.ships.tile import Tile
 
-# Maps "system name" (the canonical key) -> the concrete System subclass that
-# implements it. New systems register here.
+# Phase-2 placeholder crew names. Replaced by name generation in a later phase.
+_CREW_NAME_POOL: tuple[str, ...] = (
+    "Sera", "Renn", "Korr", "Aldine", "Yvet", "Tovin",
+    "Mara", "Vex", "Lia", "Sten", "Pava", "Nyx",
+)
+
+# Preferred placement order — first crew goes to piloting room, etc.
+_PLACEMENT_PREFERENCE: tuple[str, ...] = (
+    "piloting", "weapons", "engines", "shields", "medbay", "teleporter", "oxygen",
+)
+
+# System name -> concrete System subclass.
 _SYSTEM_FACTORIES: dict[str, type[System]] = {
     "weapons": WeaponsSystem,
     "shields": ShieldsSystem,
     "engines": EnginesSystem,
     "piloting": PilotingSystem,
     "cloaking": CloakingSystem,
+    "medbay": MedbaySystem,
+    "oxygen": OxygenSystem,
+    "teleporter": TeleporterSystem,
 }
 
-# Maps weapon family -> concrete Weapon class.
+# Weapon family -> concrete Weapon class.
 _WEAPON_FAMILIES: dict[str, type[Weapon]] = {
     "laser": LaserWeapon,
     "missile": MissileWeapon,
@@ -55,6 +78,8 @@ _WEAPON_FAMILIES: dict[str, type[Weapon]] = {
 class Ship:
     """Base ship. Holds layout, systems, crew, and loadout."""
 
+    _team: str = "neutral"
+
     def __init__(
         self,
         name: str = "Unnamed",
@@ -63,9 +88,11 @@ class Ship:
     ) -> None:
         self.name = name
         self.hull = Hull(current=max_hull, maximum=max_hull)
-        self.max_reactor_power: int = max_reactor_power
+        self.base_max_reactor_power: int = max_reactor_power
+        self.crew_power_bonus: int = 0  # recomputed each tick by species behavior
         self.rooms: dict[str, Room] = {}
         self.doors: dict[str, Door] = {}
+        self.tile_graph: dict[tuple[int, int], Tile] = {}
         self.systems: dict[str, System] = {}
         self.crew: list[Crew] = []
         self.weapons: list[Weapon] = []
@@ -87,6 +114,10 @@ class Ship:
     # --- accessors -----------------------------------------------------------
 
     @property
+    def max_reactor_power(self) -> int:
+        return self.base_max_reactor_power + self.crew_power_bonus
+
+    @property
     def shields(self) -> ShieldsSystem | None:
         s = self.systems.get("shields")
         return s if isinstance(s, ShieldsSystem) else None
@@ -102,6 +133,21 @@ class Ship:
         return s if isinstance(s, WeaponsSystem) else None
 
     @property
+    def medbay(self) -> MedbaySystem | None:
+        s = self.systems.get("medbay")
+        return s if isinstance(s, MedbaySystem) else None
+
+    @property
+    def oxygen_system(self) -> OxygenSystem | None:
+        s = self.systems.get("oxygen")
+        return s if isinstance(s, OxygenSystem) else None
+
+    @property
+    def teleporter(self) -> TeleporterSystem | None:
+        s = self.systems.get("teleporter")
+        return s if isinstance(s, TeleporterSystem) else None
+
+    @property
     def power_used(self) -> int:
         return sum(s.current_power for s in self.systems.values())
 
@@ -109,25 +155,68 @@ class Ship:
     def power_available(self) -> int:
         return self.max_reactor_power - self.power_used
 
+    def is_home_team(self, crew: Crew) -> bool:
+        return crew.home_ship is self
+
+    def door_between(
+        self, coord_a: tuple[int, int], coord_b: tuple[int, int]
+    ) -> Door | None:
+        for door in self.doors.values():
+            if door.connects_tiles(coord_a, coord_b):
+                return door
+        return None
+
+    def room_for_tile(self, tile: Tile) -> Room | None:
+        return self.rooms.get(tile.room_id)
+
     def evasion_chance(self) -> float:
+        base = 0.0
         engines = self.engines
-        if engines is None:
-            return 0.0
-        return engines.evasion_chance
+        if engines is not None:
+            base = engines.evasion_chance
+            if engines.manning_crew is not None:
+                base += 0.05
+        piloting = self.systems.get("piloting")
+        if piloting is not None and piloting.manning_crew is not None:
+            base += 0.05
+        return min(0.6, base)
 
     # --- ticking -------------------------------------------------------------
 
     def tick(self, dt: float) -> None:
-        for room in self.rooms.values():
-            room.tick(dt)
+        # Imported lazily to avoid a circular import (atmosphere/hazards/
+        # movement all reference Ship via TYPE_CHECKING).
+        from ftl.crew import movement as crew_movement
+        from ftl.ships import atmosphere, hazards
+
+        # 1. Reset crew_power_bonus; species behaviors re-accumulate it.
+        self.crew_power_bonus = 0
+        # 2. Atmosphere + hazards: update room state (oxygen, fire, breach).
+        atmosphere.tick_atmosphere(self, dt)
+        hazards.tick_hazards(self, dt)
+        # 3. Crew movement + manning + repair + healing + fire-fighting.
+        crew_movement.tick_movement(self, dt)
+        # 4. Per-crew personal tick (species behaviors run here).
+        for crew_member in self.crew:
+            if crew_member.alive:
+                crew_member.tick(dt)
+        # 5. Systems tick (cooldowns, shield recharge, ion decay, etc.).
         for system in self.systems.values():
             system.tick(dt)
+        # 6. Weapons charge — apply manning bonus from the WeaponsSystem.
+        weapons_charge_mult = self._weapons_charge_multiplier()
         for weapon in self.weapons:
-            weapon.tick(dt)
+            weapon.tick(dt * weapons_charge_mult)
+        # 7. Drones (Phase 3+ work).
         for drone in self.drones:
             drone.tick(dt)
-        for crew_member in self.crew:
-            crew_member.tick(dt)
+
+    def _weapons_charge_multiplier(self) -> float:
+        ws = self.weapons_system
+        if ws is None or ws.manning_crew is None:
+            return 1.0
+        # -10% charge time = +1/0.9 ≈ +11.1% charge rate.
+        return 1.0 / 0.9
 
     # --- factory -------------------------------------------------------------
 
@@ -137,23 +226,25 @@ class Ship:
         ship_def: ShipDef,
         registry: Registry,
     ) -> Ship:
-        """Build a Ship from a canonical ShipDef + Registry.
-
-        Rooms come from the layout. Systems are installed in the first room
-        that lists them. Weapons are looked up in the registry; an unknown
-        weapon id raises KeyError.
-        """
+        """Build a Ship from a canonical ShipDef + Registry."""
         ship = cls(
             name=ship_def.name,
             max_hull=ship_def.max_hull,
             max_reactor_power=ship_def.max_reactor_power,
         )
 
-        # rooms first
+        # Build tile grid + inferred doors.
+        tiles_by_room, doors = build_layout(ship_def)
         for room_layout in ship_def.rooms:
-            ship.add_room(Room(id=room_layout.id))
+            room = Room(id=room_layout.id, tiles=tiles_by_room[room_layout.id])
+            ship.add_room(room)
+            for tile in room.tiles:
+                ship.tile_graph[(tile.x, tile.y)] = tile
 
-        # systems — install into the room that names them
+        for door in doors:
+            ship.add_door(door)
+
+        # Systems — install into the room that names them.
         for system_name in ship_def.starting_systems:
             factory = _SYSTEM_FACTORIES.get(system_name)
             if factory is None:
@@ -166,7 +257,7 @@ class Ship:
                 continue
             ship.install_system(factory(), host_room.id)
 
-        # weapons
+        # Weapons.
         for weapon_id in ship_def.starting_weapons:
             weapon_def = registry.weapons[weapon_id]
             stats = WeaponStats(
@@ -191,12 +282,88 @@ class Ship:
             weapon_cls = _WEAPON_FAMILIES.get(weapon_def.family, Weapon)
             ship.weapons.append(weapon_cls(stats))
 
+        # Crew.
+        _attach_crew_from_def(ship, ship_def, registry, cls._team)
+
         return ship
+
+
+def _attach_crew_from_def(
+    ship: Ship, ship_def: ShipDef, registry: Registry, team: str
+) -> None:
+    """Create crew from `ship_def.starting_crew` and place them on tiles."""
+    placement_rooms = _preferred_placement_rooms(ship)
+    occupied: set[str] = set()
+    for idx, species_id in enumerate(ship_def.starting_crew):
+        species_def = registry.species.get(species_id)
+        if species_def is None:
+            continue
+        species = Species(
+            id=species_def.id,
+            name=species_def.name,
+            max_hp=species_def.max_hp,
+            move_speed=species_def.move_speed,
+            damage_mult=species_def.damage_mult,
+            fire_resistance=species_def.fire_resistance,
+            suffocation_mult=species_def.suffocation_mult,
+            repair_speed=species_def.repair_speed,
+            combat_damage=species_def.combat_damage,
+            traits=list(species_def.traits),
+        )
+        crew_name = _CREW_NAME_POOL[idx % len(_CREW_NAME_POOL)]
+        crew = Crew(
+            name=crew_name,
+            species=species,
+            team=team,
+            behavior=behavior_for(species_id),
+        )
+        crew.home_ship = ship
+        crew.current_ship = ship
+        _place_crew_on_tile(crew, ship, placement_rooms, occupied)
+        ship.crew.append(crew)
+
+
+def _preferred_placement_rooms(ship: Ship) -> list[str]:
+    ordered: list[str] = []
+    for pref in _PLACEMENT_PREFERENCE:
+        for room in ship.rooms.values():
+            if room.system is not None and room.system.name == pref:
+                if room.id not in ordered:
+                    ordered.append(room.id)
+                break
+    # add any leftover rooms so we never fail to place.
+    for room in ship.rooms.values():
+        if room.id not in ordered:
+            ordered.append(room.id)
+    return ordered
+
+
+def _place_crew_on_tile(
+    crew: Crew, ship: Ship, placement_rooms: list[str], occupied: set[str]
+) -> None:
+    for room_id in placement_rooms:
+        if room_id in occupied:
+            continue
+        room = ship.rooms[room_id]
+        if not room.tiles:
+            continue
+        crew.current_tile = room.tiles[0]
+        occupied.add(room_id)
+        return
+    # Fallback: any room with tiles (allow stacking).
+    for room in ship.rooms.values():
+        if room.tiles:
+            crew.current_tile = room.tiles[0]
+            return
 
 
 class PlayerShip(Ship):
     """Ship under player control."""
 
+    _team: str = "player"
+
 
 class EnemyShip(Ship):
     """Ship under AI control."""
+
+    _team: str = "enemy"

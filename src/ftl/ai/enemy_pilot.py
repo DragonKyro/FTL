@@ -91,6 +91,9 @@ class EnemyPilot:
         return self.rng.choice(room_ids)
 
     def tick(self, dt: float) -> None:
+        # Re-sync weapon power against the weapons system in case damage
+        # has reduced its capacity.
+        self._power_weapons()
         target_id = self._pick_target()
         if target_id is None:
             return

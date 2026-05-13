@@ -23,6 +23,8 @@ class Projectile:
     damage: int
     shield_piercing: bool
     weapon_family: str  # "laser" | "missile" | "beam" | ...
+    fire_chance: float = 0.0
+    breach_chance: float = 0.0
     travel_time: float = 1.0
     elapsed: float = 0.0
 

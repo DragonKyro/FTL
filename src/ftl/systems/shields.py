@@ -47,7 +47,9 @@ class ShieldsSystem(System):
         if not self.is_operational:
             self.recharge_progress = 0.0
             return
-        self.recharge_progress += dt
+        # Manning the shields room speeds recharge by ~11% (-10% recharge time).
+        manning_mult = 1.0 / 0.9 if self.manning_crew is not None else 1.0
+        self.recharge_progress += dt * manning_mult
         while (
             self.recharge_progress >= RECHARGE_TIME_PER_LAYER
             and self.current_layers < self.max_layers

@@ -1,10 +1,8 @@
-"""Species data + behavior hooks.
+"""Species data + behavior hook protocol.
 
 `Species` is a runtime dataclass mirroring `data.schemas.SpeciesDef`.
-`SpeciesBehavior` is the override-point for non-stat traits: oxygen-draining
-metallic species, room-locking crystalline species, energy-providing low-HP
-species, mind-affecting amphibious species, etc. Each special trait gets its
-own behavior subclass.
+`SpeciesBehavior` is the override-point for non-stat traits. Concrete
+behaviors (Sapien, Halene, Mhirsa, ...) live in `species_behaviors/`.
 """
 
 from __future__ import annotations
@@ -32,13 +30,23 @@ class Species:
 
 
 class SpeciesBehavior:
-    """Override hooks for trait-driven behavior. Default = no-op."""
+    """Hook protocol for trait-driven behavior. Default = no-op everywhere."""
 
     def on_tick(self, crew: Crew, dt: float) -> None:
         return None
 
-    def on_combat_damage_dealt(self, crew: Crew, victim: Crew, amount: int) -> None:
+    def on_combat_damage_dealt(
+        self, crew: Crew, victim: Crew, amount: float
+    ) -> None:
         return None
 
     def on_room_enter(self, crew: Crew, room: Room) -> None:
         return None
+
+    def melee_damage(self, attacker: Crew, base: float) -> float:
+        """Allow species to scale outgoing melee damage."""
+        return base
+
+    def move_speed_multiplier(self, crew: Crew) -> float:
+        """Allow species to scale how fast they walk tile-to-tile."""
+        return 1.0

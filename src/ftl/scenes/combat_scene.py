@@ -1,9 +1,8 @@
-"""Combat scene — the playable view for one 1v1 fight.
+"""Combat scene — the playable view for one 1v1 fight (Phase 2 wiring).
 
-Composes ShipView (×2), PowerPanel, WeaponStrip, and CombatHUD over the
-CombatEngine. Handles input: spacebar pause, number keys for system power,
-click weapon slot to select, click enemy room to target, F to flee, Esc to
-return to main menu.
+Composes ShipView (×2), CrewPanel, PowerPanel, WeaponStrip, CombatHUD.
+Handles input: pause, system power, weapon selection + targeting, crew
+selection + movement, door toggle, teleporter send + recall, flee.
 """
 
 from __future__ import annotations
@@ -15,7 +14,10 @@ import arcade
 from ftl.combat.combat_state import Outcome
 from ftl.config import WINDOW_HEIGHT, WINDOW_WIDTH
 from ftl.core.scene import Scene
+from ftl.crew.crew import CrewState
+from ftl.ships.pathfinding import find_path
 from ftl.ui import theme
+from ftl.ui.crew_panel import CrewPanel
 from ftl.ui.hud import CombatHUD
 from ftl.ui.power_panel import PowerPanel
 from ftl.ui.ship_view import ShipView
@@ -44,28 +46,27 @@ class CombatScene(Scene):
         self.engine: CombatEngine = engine
         self.scenario_title: str = scenario_title
 
-        # Lay ships out — player on left, enemy on right.
-        ship_y = WINDOW_HEIGHT * 0.45
+        ship_y = WINDOW_HEIGHT * 0.40
         self.player_view = ShipView(
-            engine.player, player_def, WINDOW_WIDTH * 0.10, ship_y, title=engine.player.name
+            engine.player, player_def, 280, ship_y, title=engine.player.name
         )
         self.enemy_view = ShipView(
-            engine.enemy, enemy_def, WINDOW_WIDTH * 0.62, ship_y, title=engine.enemy.name
+            engine.enemy, enemy_def, 760, ship_y, title=engine.enemy.name
         )
-
-        # HUD + panels along the bottom.
+        self.crew_panel = CrewPanel(engine, origin_x=12, origin_y=WINDOW_HEIGHT - 60)
         self.power_panel = PowerPanel(
-            engine.player, origin_x=WINDOW_WIDTH * 0.05, origin_y=120
+            engine.player, origin_x=280, origin_y=140
         )
         self.weapon_strip = WeaponStrip(
             engine.player,
             engine.state.player_inventory,
-            origin_x=WINDOW_WIDTH * 0.05,
-            origin_y=60,
+            origin_x=280,
+            origin_y=80,
         )
         self.hud = CombatHUD(engine, game.simulation, scenario_title)
 
         self._outcome_handled: bool = False
+        self._teleport_mode: bool = False
 
     # --- arcade lifecycle ---------------------------------------------------
 
@@ -82,13 +83,25 @@ class CombatScene(Scene):
 
     def on_draw(self) -> None:
         self.clear()
-        self.player_view.draw(targeted_room_id=None)
-        targeted = self._currently_targeted_enemy_room()
-        self.enemy_view.draw(targeted_room_id=targeted)
+        selected_crew = self.crew_panel.selected_crew()
+        # Show the weapon-targeted room outlined in red on the enemy ship.
+        weapon_target = self._currently_targeted_enemy_room()
+        self.player_view.draw(targeted_room_id=None, selected_crew=selected_crew)
+        self.enemy_view.draw(targeted_room_id=weapon_target, selected_crew=selected_crew)
         self._draw_projectiles()
         self.hud.draw()
+        self.crew_panel.draw()
         self.power_panel.draw()
         self.weapon_strip.draw()
+        if self._teleport_mode:
+            arcade.draw_text(
+                "TELEPORT MODE — click an enemy room",
+                WINDOW_WIDTH / 2,
+                WINDOW_HEIGHT - 90,
+                theme.TEXT_WARNING,
+                theme.FONT_BODY_SIZE,
+                anchor_x="center",
+            )
         self._draw_controls_hint()
 
     def on_update(self, delta_time: float) -> None:
@@ -109,18 +122,76 @@ class CombatScene(Scene):
             self._cycle_power("engines")
         elif symbol == arcade.key.KEY_4:
             self._cycle_power("piloting")
+        elif symbol == arcade.key.KEY_5:
+            self._cycle_power("medbay")
+        elif symbol == arcade.key.KEY_6:
+            self._cycle_power("oxygen")
+        elif symbol == arcade.key.KEY_7:
+            self._cycle_power("teleporter")
         elif symbol == arcade.key.F:
             self.engine.begin_flee()
+        elif symbol == arcade.key.T:
+            self._teleport_mode = not self._teleport_mode
+        elif symbol == arcade.key.R:
+            self.engine.recall_boarders()
         elif symbol == arcade.key.ESCAPE:
             self._return_to_menu()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int) -> None:
-        # Click a weapon slot.
+        # Crew panel click → select crew member.
+        crew_idx = self.crew_panel.crew_at(x, y)
+        if crew_idx is not None:
+            self.crew_panel.selected_index = crew_idx
+            self.weapon_strip.selected_index = None
+            return
+
+        # Teleport mode + click enemy room → send boarders.
+        if self._teleport_mode:
+            room_id = self.enemy_view.room_at(x, y)
+            if room_id is not None:
+                target_room = self.engine.enemy.rooms.get(room_id)
+                if target_room is not None:
+                    pad_crew = self._teleporter_pad_crew()
+                    self.engine.send_boarders(pad_crew, target_room)
+            self._teleport_mode = False
+            return
+
+        # Door toggle (player ship only).
+        door = self.player_view.door_at(x, y)
+        if door is not None:
+            door.toggle()
+            return
+
+        # Selected crew + click on a tile of player or enemy → move there.
+        selected = self.crew_panel.selected_crew()
+        if selected is not None:
+            player_tile = self.player_view.tile_at(x, y)
+            enemy_tile = self.enemy_view.tile_at(x, y)
+            tile = player_tile if player_tile is not None else enemy_tile
+            if tile is not None and selected.current_ship is not None:
+                hosting_ship = (
+                    self.engine.player if player_tile is not None else self.engine.enemy
+                )
+                if (
+                    hosting_ship is selected.current_ship
+                    and selected.current_tile is not None
+                ):
+                    is_home = hosting_ship.is_home_team(selected)
+                    path = find_path(
+                        hosting_ship, selected.current_tile, tile, is_home
+                    )
+                    if path is not None:
+                        selected.path = path
+                        selected.move_progress = 0.0
+                        if path:
+                            selected.state = CrewState.MOVING
+                return
+
+        # Weapon slot click — same as Phase 1.
         idx = self.weapon_strip.slot_at(x, y)
         if idx is not None:
             weapon = self.engine.player.weapons[idx]
             if self.weapon_strip.selected_index == idx:
-                # Second click on the same slot: toggle power.
                 if weapon.powered:
                     weapon.powered = False
                 else:
@@ -128,8 +199,10 @@ class CombatScene(Scene):
                 self.weapon_strip.selected_index = None
             else:
                 self.weapon_strip.selected_index = idx
+                self.crew_panel.selected_index = None
             return
-        # Click an enemy room while a weapon is selected: set target + auto-power.
+
+        # Weapon target on enemy room.
         if self.weapon_strip.selected_index is not None:
             room_id = self.enemy_view.room_at(x, y)
             if room_id is not None:
@@ -139,6 +212,24 @@ class CombatScene(Scene):
                 self.weapon_strip.selected_index = None
 
     # --- helpers ------------------------------------------------------------
+
+    def _teleporter_pad_crew(self) -> list:  # type: ignore[type-arg]
+        tele = self.engine.player.teleporter
+        if tele is None:
+            return []
+        pad_room = next(
+            (r for r in self.engine.player.rooms.values() if r.system is tele),
+            None,
+        )
+        if pad_room is None:
+            return []
+        pad_coords = {(t.x, t.y) for t in pad_room.tiles}
+        return [
+            c for c in self.engine.player.crew
+            if c.alive
+            and c.current_tile is not None
+            and (c.current_tile.x, c.current_tile.y) in pad_coords
+        ]
 
     def _cycle_power(self, system_name: str) -> None:
         ship = self.engine.player
@@ -213,9 +304,8 @@ class CombatScene(Scene):
 
     def _draw_controls_hint(self) -> None:
         hint = (
-            "[1-4] power: weapons / shields / engines / pilot   "
-            "[click] weapon then enemy room   "
-            "[Space] pause   [F] flee   [Esc] menu"
+            "[1-7] power systems  [click crew/tile] move  [click door] toggle  "
+            "[T] teleport  [R] recall  [Space] pause  [F] flee  [Esc] menu"
         )
         arcade.draw_text(
             hint,
